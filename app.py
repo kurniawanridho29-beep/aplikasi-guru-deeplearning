@@ -26,7 +26,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-header">PORTAL ADMINISTRASI GURU DIGITAL (IPS & PPKn SMP)</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Generator Modul Ajar Deep Learning (BSKAP 2025), Presensi Dropdown Lintas Kelas & Buku Nilai KKTP Unified Table</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Generator Modul Ajar Deep Learning Lengkap (BSKAP 046/2025), Presensi Dropdown & Buku Nilai KKTP</div>', unsafe_allow_html=True)
 
 # Sidebar Navigasi
 st.sidebar.title("📌 Navigasi Fitur")
@@ -37,7 +37,7 @@ menu = st.sidebar.radio(
 
 daftar_kelas = ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"]
 
-# Database Bab & Sub-Materi Lengkap IPS & PPKn
+# Database Bab & Sub-Materi Lengkap IPS & PPKn (Berdasarkan Struktur Drive & BSKAP 2025)
 DATABASE_MATERI = {
     "Ilmu Pengetahuan Sosial (IPS)": {
         "Kelas VII / Fase D": {
@@ -215,7 +215,6 @@ def hitung_kktp_dataframe(df, kktp_val):
     df["Rata Formatif"] = df[["Formatif 1 (LKPD)", "Formatif 2 (Tugas)"]].mean(axis=1).round(1)
     df["Rata Sumatif"] = df[["Sumatif Bab 1", "Sumatif Bab 2"]].mean(axis=1).round(1)
     
-    # Formulasi Nilai Akhir (30% Formatif + 30% Sumatif + 20% STS + 20% SAS)
     df["Nilai Akhir Rapor"] = (
         (df["Rata Formatif"] * 0.3) +
         (df["Rata Sumatif"] * 0.3) +
@@ -229,15 +228,15 @@ def hitung_kktp_dataframe(df, kktp_val):
     return df
 
 # ==========================================
-# FITUR 1: GENERATOR MODUL AJAR DEEP LEARNING
+# FITUR 1: GENERATOR MODUL AJAR LENGKAP (DEEP LEARNING)
 # ==========================================
 if menu == "1. Generator Modul Ajar (Deep Learning)":
-    st.header("⚡ Generator Modul Ajar Otomatis (Deep Learning)")
-    st.write("Format disesuaikan 100% dengan Standar Modul Ajar Deep Learning (*Mindful, Meaningful, & Joyful Learning*) BSKAP No. 046/H/KR/2025.")
+    st.header("⚡ Generator Modul Ajar Lengkap & Komprehensif (Deep Learning)")
+    st.write("Format disesuaikan dengan Standar Modul Ajar Deep Learning (*Mindful, Meaningful, & Joyful Learning*) BSKAP No. 046/H/KR/2025 & Template Lengkap Drive.")
 
     col1, col2 = st.columns(2)
     with col1:
-        nama_sekolah = st.text_input("Nama Sekolah / Yayasan:", value="SMP YAYASAN")
+        nama_sekolah = st.text_input("Nama Sekolah / Yayasan:", value="SMP YAYASAN INTERNASIONAL")
         nama_guru = st.text_input("Nama Guru / Penyusun:", value="Ridho Kurniawan, S.Pd.")
         mapel = st.selectbox("Mata Pelajaran:", ["Ilmu Pengetahuan Sosial (IPS)", "Pendidikan Pancasila (PPKn)"])
         tingkat_kelas = st.selectbox("Pilih Tingkatan Kelas:", ["Kelas VII / Fase D", "Kelas VIII / Fase D", "Kelas IX / Fase D"])
@@ -255,55 +254,172 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
             options=pilihan_sub_materi,
             default=pilihan_sub_materi[:2] if pilihan_sub_materi else []
         )
-        str_sub_materi = ", ".join(sub_materi_terpilih) if sub_materi_terpilih else "Belum memilih sub-materi"
+        str_sub_materi = ", ".join(sub_materi_terpilih) if sub_materi_terpilih else "Materi Pokok Bab"
 
-        alokasi_jp = st.number_input("Alokasi Waktu (JP):", min_value=2, max_value=36, value=4, step=2)
+        alokasi_jp = st.number_input("Alokasi Waktu Total (JP):", min_value=2, max_value=36, value=8, step=2)
         tahun_ajaran = st.text_input("Tahun Pelajaran:", value="2026/2027")
 
-    if st.button("🚀 Generate Modul Ajar Deep Learning"):
-        st.success(f"Berhasil meng-generate Modul Ajar **{mapel}** berbasis **Deep Learning**!")
+    instruksi_khusus = st.text_area("Pendekatan / Catatan Khusus Guru (Konteks Sekolah):", value="Gunakan studi kasus nyata di lingkungan sekitar sekolah, diskusi kelompok berkolaborasi, dan presentasi produk visual/digital.")
+
+    if st.button("🚀 Generate Modul Ajar Deep Learning Lengkap"):
+        st.success(f"Berhasil meng-generate Modul Ajar Lengkap **{mapel}** berbasis **Deep Learning**!")
         
+        # FORMAT KOMPREHENSIF LENGKAP SESUAI DRIVE DAN BSKAP 2025
         modul_text = f"""
-# MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING)
+# MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING MODEL)
 **MATA PELAJARAN:** {mapel.upper()}  
 **STANDAR KEPUTUSAN BSKAP NOMOR 046/H/KR/2025**
 
 ---
+
+## I. INFORMASI UMUM
 
 ### A. IDENTITAS MODUL
 * **Nama Sekolah:** {nama_sekolah}
 * **Nama Penyusun:** {nama_guru}
 * **Mata Pelajaran:** {mapel}
 * **Kelas / Fase / Semester:** {fase_kelas}
-* **Bab / Topik Utama:** {bab_materi}
+* **Bab / Tema Utama:** {bab_materi}
 * **Sub-Materi Pembelajaran:** {str_sub_materi}
-* **Alokasi Waktu:** {alokasi_jp} JP
+* **Alokasi Waktu:** {alokasi_jp} JP (2 Pertemuan x {alokasi_jp//2} JP)
 * **Tahun Pelajaran:** {tahun_ajaran}
 
-### B. DESAIN DEEP LEARNING (3 ELEMEN UTAMA)
-1. **Mindful Learning (Kesadaran Utuh):** Apersepsi berkesadaran di mana peserta didik diajak merefleksikan pengalaman pribadi terkait {str_sub_materi}.
-2. **Meaningful Learning (Pembelajaran Bermakna):** Materi dihubungkan langsung dengan konteks kehidupan sehari-hari dan pemecahan masalah nyata.
-3. **Joyful Learning (Pembelajaran Menyenangkan):** Penggunaan media interaktif, diskusi kelompok kolaboratif, dan presentasi hasil karya yang menggembirakan.
+### B. KOMPETENSI AWAL
+1. Peserta didik telah memahami konsep dasar kehidupan bermasyarakat dan lingkungan sosial sekitar.
+2. Peserta didik memiliki kemampuan awal dalam mengidentifikasi fenomena sosial/pancasila di lingkungan sehari-hari.
 
-### C. SKENARIO KEGIATAN PEMBELAJARAN
-* **Pendahuluan (15 Menit):** Orientasi Mindful Start & Refleksi Kesadaran Awal. Pertanyaan Pemantik Kontekstual.
-* **Kegiatan Inti ({alokasi_jp * 40 - 30} Menit):**
-  - *Eksplorasi Konsep (Mindful Exploration):* Menelaah materi {str_sub_materi}.
-  - *Koneksi Bermakna (Meaningful Task):* Diskusi pemecahan masalah/studi kasus kontekstual secara berkolaborasi.
-  - *Unjuk Karya & Refleksi (Joyful Share):* Presentasi kreatif antar kelompok dan pemberian umpan balik positif (peer review).
-* **Penutup (15 Menit):** Kesimpulan bersama, evaluasi mandiri, dan refleksi pembelajaran.
+### C. PROFIL PELAJAR PANCASILA
+* **Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia:** Menghargai keberagaman dan norma sosial.
+* **Bernalar Kritis:** Mampu menganalisis fenomena sosial/pancasila secara objektif dan berbasis data.
+* **Gotong Royong:** Berkolaborasi secara efektif dalam diskusi kelompok dan penyelesaian tugas bersama.
+* **Kreatif:** Menghasilkan karya/solusi inovatif terkait topik {str_sub_materi}.
+
+### D. SARANA DAN PRASARANA
+* **Media:** Laptop, Proyektor, Peta Konseptual/Digital, Slide Presentasi, Artikel Kasus, Lembar Kerja Peserta Didik (LKPD).
+* **Sumber Belajar:** Buku Paket Siswa Kurikulum Merdeka {mapel}, Artikel Berita, Lingkungan Sekitar Sekolah.
+
+### E. TARGET PESERTA DIDIK
+* **Target:** Peserta didik reguler / tipikal (tidak ada kesulitan dalam memahami materi ajar).
+* **Model Pembelajaran:** *Deep Learning Model* (Mindful, Meaningful, & Joyful Learning) dengan pendekatan *Problem-Based Learning* (PBL).
+
+---
+
+## II. KOMPONEN INTI
+
+### A. TUJUAN PEMBELAJARAN (TP)
+1. Peserta didik mampu mendeskripsikan dan menganalisis konsep {str_sub_materi} dengan tepat.
+2. Peserta didik mampu mengidentifikasi serta memecahkan masalah kontekstual yang berkaitan dengan {bab_materi} di kehidupan nyata.
+3. Peserta didik mampu menyajikan hasil analisis dan solusi kreatif mengenai {str_sub_materi} melalui presentasi atau media visual.
+
+### B. PEMAHAMAN BERMAKNA (MEANINGFUL LEARNING)
+* Pemahaman terhadap {str_sub_materi} membantu peserta didik menyadari peran aktifnya sebagai warga negara yang bijak, kritis, dan bertanggung jawab di tengah kehidupan sosial masyarakat.
+
+### C. PERTANYAAN PEMANTIK
+1. *Mengapa topik {str_sub_materi} sangat dekat dan penting dalam kehidupan sehari-hari kita?*
+2. *Dampak apa yang akan terjadi jika kita tidak memahami dan menerapkan prinsip {bab_materi} di masyarakat?*
+
+---
+
+## III. KEGIATAN PEMBELAJARAN DETAIL (DEEP LEARNING SYNTAX)
+
+### 🔴 PERTEMUAN 1 ({alokasi_jp//2} JP) - EKSPLORASI KONSEP & MINDFUL LEARNING
+
+#### 1. Pendahuluan (15 Menit) - *Mindful Start*
+* **Salam & Doa:** Guru membuka pembelajaran dengan salam dan berdoa bersama untuk membangun suasana religius.
+* **Apersepsi Kesadaran Utuh (Mindful Awareness):** Guru mengajak peserta didik melakukan refleksi singkat (mengamati gambar/video terkait {str_sub_materi}) dan menanyakan perasaan peserta didik sebelum belajar.
+* **Motivasi & Tujuan:** Guru menyampaikan tujuan pembelajaran, alokasi waktu, dan manfaat mempelajari {str_sub_materi}.
+
+#### 2. Kegiatan Inti ({alokasi_jp * 20 - 30} Menit) - *Meaningful & Joyful Exploration*
+* **Orientasi Masalah (Meaningful Learning):** Guru menyajikan studi kasus / fenomena nyata yang relevan dengan {str_sub_materi}.
+* **Pengorganisasian Kelompok:** Peserta didik dibagi menjadi beberapa kelompok heterogen (4-5 orang).
+* **Penyelidikan Terbimbing (Mindful Thinking):** Peserta didik mengumpulkan data dan membaca bahan ajar terkait {str_sub_materi}. Guru melakukan *scaffolding* (bimbingan) sesuai tingkat kebutuhan kelompok.
+* **Diskusi Interaktif (Joyful Collaboration):** Kelompok mendiskusikan pertanyaan pada LKPD 1 yang berfokus pada analisis akar masalah dan dampaknya.
+
+#### 3. Penutup (15 Menit)
+* Guru dan peserta didik membuat kesimpulan sementara.
+* Refleksi singkat mengenai pengalaman belajar hari ini (*Joyful Feedback*).
+* Doa penutup dan salam.
+
+---
+
+### 🔴 PERTEMUAN 2 ({alokasi_jp//2} JP) - APLIKASI, UNJUK KARYA & REFLEKSI
+
+#### 1. Pendahuluan (15 Menit)
+* Guru mereview kembali pemahaman dari Pertemuan 1 terkait {str_sub_materi}.
+* Guru menyampaikan alur kegiatan utama: Penyusunan Solusi dan Presentasi Karya.
+
+#### 2. Kegiatan Inti ({alokasi_jp * 20 - 30} Menit) - *Joyful Share & Action*
+* **Penyusunan Produk Kreatif:** Setiap kelompok merumuskan solusi atas masalah {str_sub_materi} dan menyajikannya dalam bentuk poster / infografis / ringkasan visual.
+* **Unjuk Kerja & Presentasi (*Joyful Share*):**
+  - Masing-masing kelompok mempresentasikan hasil karyanya di depan kelas.
+  - Kelompok lain memberikan masukan, pertanyaan, atau tanggapan apresiatif (*Peer Review*).
+* **Penguatan Konsep (Meaningful Assessment):** Guru memberikan konfirmasi, penguatan materi, dan meluruskan miskonsepsi.
+
+#### 3. Penutup (15 Menit) - *Deep Reflection*
+* **Refleksi Deep Learning:** Peserta didik mengisi lembar refleksi diri tentang apa yang telah dipelajari, perasaan saat berdiskusi, dan komitmen tindakan nyata.
+* **Evaluasi / Asesmen Sumatif Singkat:** Pengerjaan soal tes formatif/sumatif secara mandiri.
+* **Doa & Penutup.**
+
+---
+
+## IV. ASESMEN PEMBELAJARAN (PENILAIAN)
+
+1. **Asesmen Sikap:** Observasi Profil Pelajar Pancasila (Bernalar Kritis, Gotong Royong, Mandiri).
+2. **Asesmen Formatif:** Penilaian Diskusi Kelompok, Observasi Kesiapan, dan Pengerjaan LKPD.
+3. **Asesmen Sumatif:** Tes Tertulis Pilihan Ganda / Uraian Analitis mengenai {str_sub_materi}.
+
+---
+
+## V. LAMPIRAN MODUL AJAR
+
+### A. LEMBAR KERJA PESERTA DIDIK (LKPD) DEEP LEARNING
+* **Nama Kelompok:** ...........................................
+* **Kelas:** {fase_kelas}
+* **Materi:** {str_sub_materi}
+* **Tugas Diskusi:**
+  1. Amatilah fenomena/masalah yang disajikan oleh guru mengenai {str_sub_materi}!
+  2. Analisislah penyebab utama timbulnya fenomena tersebut!
+  3. Rumuskan 3 solusi kreatif dan rasional yang dapat dilakukan oleh generasi muda untuk mengatasinya!
+  4. Sajikan hasil diskusimu dalam bentuk pameran karya visual / poster ringkas!
+
+### B. RUBRIK PENILAIAN DISKUSI & UNJUK KARYA
+| Kriteria Penilaian | Sangat Baik (4) | Baik (3) | Cukup (2) | Perlu Bimbingan (1) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Penguasaan Materi** | Menjelaskan {str_sub_materi} sangat akurat & analitis | Menjelaskan materi dengan akurat | Menjelaskan materi cukup akurat | Kurang memahami materi |
+| **Kerjasama Kelompok** | Semua anggota aktif dan saling mendukung | Sebagian besar anggota aktif | Hanya sebagian anggota aktif | Pasif dalam kelompok |
+| **Kreativitas Produk** | Sangat kreatif, rapi, dan komunikatif | Kreatif dan rapi | Cukup rapi | Less visual / tidak rapi |
+
+---
+**Mengetahui,**  
+Kepala Sekolah SMP  
+
+**( .................................................... )**  
+NIP.  
+
+**Guru Mata Pelajaran**  
+
+**({nama_guru})**  
+NIP.
         """
+        
         st.markdown(modul_text)
         
+        # Download Excel
         df_modul = pd.DataFrame([{
-            "Nama Sekolah": nama_sekolah, "Penyusun": nama_guru, "Mata Pelajaran": mapel,
-            "Kelas/Fase": fase_kelas, "Bab / Topik": bab_materi, "Sub-Materi": str_sub_materi,
-            "Alokasi JP": alokasi_jp, "Isi Lengkap Modul Ajar": modul_text
+            "Nama Sekolah": nama_sekolah,
+            "Penyusun": nama_guru,
+            "Mata Pelajaran": mapel,
+            "Kelas/Fase": fase_kelas,
+            "Bab / Topik": bab_materi,
+            "Sub-Materi": str_sub_materi,
+            "Alokasi JP": alokasi_jp,
+            "Isi Lengkap Modul Ajar Deep Learning": modul_text
         }])
+        
         st.download_button(
-            label="📥 Download Modul Ajar (Excel)",
-            data=to_excel(df_modul, "Modul_Ajar"),
-            file_name=f"Modul_Ajar_{mapel}_{tingkat_kelas[:8]}.xlsx",
+            label="📥 Download Modul Ajar Lengkap (Excel)",
+            data=to_excel(df_modul, "Modul_Ajar_Lengkap"),
+            file_name=f"Modul_Ajar_Lengkap_{mapel}_{tingkat_kelas[:8]}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
@@ -372,7 +488,6 @@ else:
     with col_k2:
         kktp_limit = st.slider("Batas Kriteria Ketercapaian Tujuan Pembelajaran (KKTP):", min_value=60, max_value=85, value=75)
 
-    # Inisialisasi Data Awal jika Belum Ada
     if f"nilai_{selected_kelas_nilai}" not in st.session_state:
         raw_data = pd.DataFrame({
             "NIS": ["1001", "1002", "1003", "1004", "1005"],
@@ -393,14 +508,10 @@ else:
         st.session_state[f"nilai_{selected_kelas_nilai}"] = hitung_kktp_dataframe(raw_data, kktp_limit)
 
     df_current = st.session_state[f"nilai_{selected_kelas_nilai}"]
-
-    # Pastikan perhitungan selalu up-to-date dengan slider KKTP
     df_current = hitung_kktp_dataframe(df_current, kktp_limit)
 
     st.subheader(f"📊 Tabel Penilaian Rapor Lengkap - {selected_kelas_nilai}")
-    st.caption(" Kolom berlatar belakang abu-abu (*Rata Formatif, Rata Sumatif, Nilai Akhir Rapor, dan Status KKTP*) dikalkulasi otomatis oleh sistem.")
-
-    # SATU TABEL UNTUK INPUT DAN PROSES HASIL KALKULASI
+    
     edited_unified_df = st.data_editor(
         df_current,
         column_config={
@@ -412,7 +523,6 @@ else:
             "Sumatif Bab 2": st.column_config.NumberColumn("Sumatif 2", min_value=0, max_value=100, step=1),
             "STS": st.column_config.NumberColumn("STS", min_value=0, max_value=100, step=1),
             "SAS": st.column_config.NumberColumn("SAS", min_value=0, max_value=100, step=1),
-            # Kolom Hasil Kalkulasi Dikunci (Disabled) Agar Penginputan Ringan Tanpa Redundant Rendering
             "Rata Formatif": st.column_config.NumberColumn("Rata Formatif", disabled=True, format="%.1f"),
             "Rata Sumatif": st.column_config.NumberColumn("Rata Sumatif", disabled=True, format="%.1f"),
             "Nilai Akhir Rapor": st.column_config.NumberColumn("Nilai Akhir", disabled=True, format="%d"),
@@ -423,11 +533,9 @@ else:
         key=f"editor_unified_{selected_kelas_nilai}"
     )
 
-    # Hitung dan Update Simpanan State
     updated_df = hitung_kktp_dataframe(edited_unified_df, kktp_limit)
     st.session_state[f"nilai_{selected_kelas_nilai}"] = updated_df
 
-    # Tombol Download Excel Langsung
     st.download_button(
         label=f"📥 Download Rekap Buku Nilai Lengkap {selected_kelas_nilai} (Excel)",
         data=to_excel(updated_df, sheet_name=f"Nilai_{selected_kelas_nilai}"),
