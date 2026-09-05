@@ -37,6 +37,168 @@ menu = st.sidebar.radio(
 
 daftar_kelas = ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"]
 
+# Database Bab & Sub-Materi Lengkap IPS & PPKn (Disesuaikan dari Google Drive & BSKAP 046/2025)
+DATABASE_MATERI = {
+    "Ilmu Pengetahuan Sosial (IPS)": {
+        "Kelas VII / Fase D": {
+            "Bab 1: Keluarga Awal Kehidupan": [
+                "Sejarah Asal Usul Keluarga & Silsilah Keluarga",
+                "Konsep Lokasi Absolut dan Lokasi Relatif",
+                "Letak, Luas, Cuaca, Iklim & Geologis Indonesia",
+                "Komponen Peta dan Fungsi Peta",
+                "Sejarah Lisan dan Sumber Sejarah Lisan",
+                "Manusia sebagai Makhluk Sosial dan Ekonomi Bermoral",
+                "Hakikat dan Agen-Agen Sosialisasi",
+                "Nilai dan Norma dalam Kehidupan Masyarakat",
+                "Interaksi Antar Wilayah",
+                "Kebutuhan Manusia dan Alat Pemuas Kebutuhan"
+            ],
+            "Bab 2: Keberagaman Lingkungan Sekitar": [
+                "Pencemaran Lingkungan & Pelestarian Sumber Daya",
+                "Pembentukan Muka Bumi & Pembentukan Batuan",
+                "Kehidupan Masyarakat Masa Praaksara",
+                "Pembangunan Berkelanjutan (SDGs)"
+            ],
+            "Bab 3: Potensi Ekonomi Lingkungan": [
+                "Kegiatan Ekonomi (Produksi, Distribusi, Konsumsi)",
+                "Pelaku Ekonomi di Masyarakat",
+                "Peran Masyarakat dalam Rantai Ekonomi",
+                "Pasar dan Pembentukan Harga Pasar"
+            ],
+            "Bab 4: Pemberdayaan Masyarakat": [
+                "Keragaman Sosial Budaya Indonesia",
+                "Pemberdayaan Finansial & Literasi Keuangan",
+                "Peranan Komunitas Lokal dalam Perekonomian"
+            ]
+        },
+        "Kelas VIII / Fase D": {
+            "Bab 1: Kondisi Geografis dan Pelestarian Sumber Daya Alam": [
+                "Keragaman Alam Indonesia & Letak Astronomis",
+                "Pemanfaatan dan Pelestarian Sumber Daya Alam",
+                "Kualitas Sumber Daya Manusia (SDM)",
+                "Lembaga Sosial dalam Pengelolaan SDA"
+            ],
+            "Bab 2: Kemajemukan Masyarakat Indonesia": [
+                "Keragaman Etnis, Agama, dan Budaya",
+                "Mobilitas Sosial (Vertikal & Horizontal)",
+                "Interaksi Budaya Hindia-Buddha dan Islam",
+                "Konflik dan Integrasi Sosial"
+            ],
+            "Bab 3: Nasionalisme dan Pengembangan Ekonomi": [
+                "Penjelajahan Samudra & Kolonialisme di Indonesia",
+                "Tumbuhnya Pergerakan Nasional & Sumpah Pemuda",
+                "Perdagangan Antarpulau dan Antarnegara",
+                "Penguatan Ekonomi Maritim dan Agrikultur"
+            ],
+            "Bab 4: Pembangunan Perekonomian Indonesia": [
+                "Kondisi Ekonomi Pasca Kemerdekaan",
+                "Orde Baru dan Perubahan Perekonomian",
+                "Ekonomi Digital & Peran Generasi Muda",
+                "Tantangan Pembangunan Ekonomi Nasional"
+            ]
+        },
+        "Kelas IX / Fase D": {
+            "Bab 1: Perubahan Sosial dan Globalisasi": [
+                "Bentuk-Bentuk Perubahan Sosial Masyarakat",
+                "Dampak Modernisasi & Globalisasi",
+                "Kearifan Lokal dalam Menghadapi Globalisasi",
+                "Digitalisasi Sosial dan Budaya Masa Kini"
+            ],
+            "Bab 2: Keragaman Bangsa-Bangsa di Dunia": [
+                "Karakteristik Benua-Benua di Dunia",
+                "Potensi Sumber Daya Negara-Negara Dunia",
+                "Interaksi Antarruang dan Kerjasama Internasional",
+                "Pengaruh Kerjasama Internasional bagi Indonesia"
+            ],
+            "Bab 3: Literasi Keuangan dan Kesejahteraan Masyarakat": [
+                "Lembaga Keuangan Bank dan Non-Bank",
+                "Sistem Pembayaran dan Uang Digital",
+                "Pengelolaan Keuangan Pribadi & Investasi",
+                "Kewirausahaan dan Ekonomi Kreatif"
+            ],
+            "Bab 4: Indonesia dalam Kehidupan Dunia": [
+                "Peran Aktif Indonesia dalam Perdamaian Dunia",
+                "Kerjasama ASEAN, Asia-Afrika, dan PBB",
+                "Isu Lingkungan Global & Krisis Iklim"
+            ]
+        }
+    },
+    "Pendidikan Pancasila (PPKn)": {
+        "Kelas VII / Fase D": {
+            "Bab 1: Sejarah Kelahiran Pancasila": [
+                "Latar Belakang & Sejarah Nilai-Nilai Pancasila",
+                "Kelahiran Pancasila, Janji Kemerdekaan & BPUPK",
+                "Perumusan Pancasila oleh Panitia Sembilan",
+                "Penetapan Pancasila sebagai Dasar Negara oleh PPKI",
+                "Penerapan Nilai-Nilai Pancasila dalam Kehidupan Sehari-hari"
+            ],
+            "Bab 2: Norma dan UUD NRI Tahun 1945": [
+                "Pengertian dan Jenis-jenis Norma",
+                "Arti Penting Norma dalam Kehidupan Bermasyarakat",
+                "Sejarah Perumusan UUD NRI Tahun 1945",
+                "Amandemen dan Penerapan UUD NRI 1945"
+            ],
+            "Bab 3: Kesatuan Indonesia dan Karakteristik Daerah": [
+                "Wilayah Negara Kesatuan Republik Indonesia (NKRI)",
+                "Indonesia sebagai Negara Kesatuan",
+                "Karakteristik Daerah dalam Frame NKRI",
+                "Mempertahankan Persatuan dan Kesatuan Bangsa"
+            ],
+            "Bab 4: Kebinekaan Indonesia": [
+                "Keragaman Suku, Agama, Ras, dan Antargolongan",
+                "Menghargai Keberagaman Budaya Lokal",
+                "Menjaga Toleransi dan Harmoni Sosial"
+            ]
+        },
+        "Kelas VIII / Fase D": {
+            "Bab 1: Kedudukan dan Fungsi Pancasila": [
+                "Pancasila sebagai Dasar Negara",
+                "Pancasila sebagai Pandangan Hidup Bangsa",
+                "Pancasila sebagai Ideologi Negara",
+                "Meneladani Nilai Pancasila dalam Masyarakat"
+            ],
+            "Bab 2: Bentuk dan Kedaulatan Negara": [
+                "Indonesia sebagai Negara Hukum",
+                "Bentuk Negara Kesatuan dan Republik",
+                "Kedaulatan Rakyat dan Sistem Demokrasi",
+                "Peran Lembaga-Lembaga Negara"
+            ],
+            "Bab 3: Tata Urutan Peraturan Perundang-undangan": [
+                "Hierarki Peraturan Perundang-undangan Indonesia",
+                "Proses Pembuatan Undang-Undang",
+                "Kepatuhan terhadap Hukum dan Peraturan"
+            ],
+            "Bab 4: Kebangkitan Nasional dan Sumpah Pemuda": [
+                "Sejarah Perjuangan Kebangkitan Nasional 1908",
+                "Makna dan Nilai-Nilai Sumpah Pemuda 1928",
+                "Semangat Sumpah Pemuda untuk Generasi Muda"
+            ]
+        },
+        "Kelas IX / Fase D": {
+            "Bab 1: Penerapan Pancasila dari Masa ke Masa": [
+                "Pancasila Masa Orde Lama & Dinamikanya",
+                "Pancasila Masa Orde Baru & Reformasi",
+                "Tantangan Ideologi Pancasila di Era Digital"
+            ],
+            "Bab 2: Hak dan Kewajiban Warga Negara": [
+                "Substansi Hak dan Kewajiban dalam UUD 1945",
+                "Keseimbangan Hak dan Kewajiban",
+                "Kasus Pelanggaran Hak & Pengingkaran Kewajiban"
+            ],
+            "Bab 3: Kemerdekaan Berpendapat Warga Negara": [
+                "Jaminan Kemerdekaan Berpendapat di Indonesia",
+                "Bentuk-Bentuk Penyampaian Pendapat",
+                "Etika Berpendapat dan Bermedia Sosial"
+            ],
+            "Bab 4: Harmoni dalam Keberagaman Masyarakat": [
+                "Permasalahan dan Dampak Keberagaman",
+                "Upaya Pencegahan Konflik SARA",
+                "Bela Negara dalam Konteks Indonesia Modern"
+            ]
+        }
+    }
+}
+
 # Helper Function untuk Export Dataframe ke Excel
 def to_excel(df, sheet_name="Data_Administrasi"):
     output = io.BytesIO()
@@ -45,7 +207,7 @@ def to_excel(df, sheet_name="Data_Administrasi"):
     return output.getvalue()
 
 # ==========================================
-# FITUR 1: GENERATOR MODUL AJAR DEEP LEARNING (STANDAR YAYASAN & BSKAP 2025)
+# FITUR 1: GENERATOR MODUL AJAR DEEP LEARNING
 # ==========================================
 if menu == "1. Generator Modul Ajar (Deep Learning)":
     st.header("⚡ Generator Modul Ajar Otomatis (Deep Learning)")
@@ -56,18 +218,29 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
         nama_sekolah = st.text_input("Nama Sekolah / Yayasan:", value="SMP YAYASAN")
         nama_guru = st.text_input("Nama Guru / Penyusun:", value="Ridho Kurniawan, S.Pd.")
         mapel = st.selectbox("Mata Pelajaran:", ["Ilmu Pengetahuan Sosial (IPS)", "Pendidikan Pancasila (PPKn)"])
-        fase_kelas = st.selectbox("Kelas / Fase / Semester:", [
-            "Kelas VII / Fase D / Ganjil",
-            "Kelas VII / Fase D / Genap",
-            "Kelas VIII / Fase D / Ganjil",
-            "Kelas VIII / Fase D / Genap",
-            "Kelas IX / Fase D / Ganjil",
-            "Kelas IX / Fase D / Genap"
-        ])
+        
+        tingkat_kelas = st.selectbox("Pilih Tingkatan Kelas:", ["Kelas VII / Fase D", "Kelas VIII / Fase D", "Kelas IX / Fase D"])
+        semester = st.selectbox("Semester:", ["Ganjil", "Genap"])
+        fase_kelas = f"{tingkat_kelas} / {semester}"
 
     with col2:
-        bab_materi = st.text_input("Bab / Topik Utama:", value="Bab 1: Keluarga Awal Kehidupan")
-        sub_materi = st.text_input("Sub-Materi Pembelajaran:", value="Sejarah Asal Usul Keluarga, Lokasi Absolut & Relatif, serta Peta")
+        # Otomatisasi Dropdown Bab sesuai Mapel & Tingkatan Kelas
+        draf_bab = DATABASE_MATERI.get(mapel, {}).get(tingkat_kelas, {})
+        pilihan_bab = list(draf_bab.keys()) if draf_bab else ["Tidak ada data Bab"]
+        
+        bab_materi = st.selectbox("Pilih Bab / Topik Utama:", pilihan_bab)
+        
+        # Otomatisasi Multi-Select Sub-Materi (Bisa pilih lebih dari 1)
+        pilihan_sub_materi = draf_bab.get(bab_materi, [])
+        sub_materi_terpilih = st.multiselect(
+            "Pilih Sub-Materi Pembelajaran (Bisa pilih lebih dari 1):",
+            options=pilihan_sub_materi,
+            default=pilihan_sub_materi[:2] if pilihan_sub_materi else []
+        )
+        
+        # Gabungkan Sub-materi terpilih menjadi bentuk teks
+        str_sub_materi = ", ".join(sub_materi_terpilih) if sub_materi_terpilih else "Belum memilih sub-materi"
+
         alokasi_jp = st.number_input("Alokasi Waktu (JP):", min_value=2, max_value=36, value=4, step=2)
         tahun_ajaran = st.text_input("Tahun Pelajaran:", value="2026/2027")
 
@@ -76,7 +249,7 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
     if st.button("🚀 Generate Modul Ajar Deep Learning"):
         st.success(f"Berhasil meng-generate Modul Ajar **{mapel}** berbasis **Deep Learning**!")
         
-        # Format Teks Modul Ajar Sesuai Template Drive
+        # Format Teks Modul Ajar Sesuai Template BSKAP 2025 & Deep Learning
         modul_text = f"""
 # MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING)
 **MATA PELAJARAN:** {mapel.upper()}  
@@ -89,16 +262,18 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 * **Nama Penyusun:** {nama_guru}
 * **Mata Pelajaran:** {mapel}
 * **Kelas / Fase / Semester:** {fase_kelas}
+* **Bab / Topik Utama:** {bab_materi}
+* **Sub-Materi Pembelajaran:** {str_sub_materi}
 * **Alokasi Waktu:** {alokasi_jp} JP
 * **Tahun Pelajaran:** {tahun_ajaran}
 
 ### B. IDENTIFIKASI KESIAPAN PESERTA DIDIK
-* **Pengetahuan Awal:** Peserta didik memiliki pemahaman dasar terkait topik {sub_materi} di lingkungan sekitar.
+* **Pengetahuan Awal:** Peserta didik memiliki pemahaman dasar terkait topik {str_sub_materi} di lingkungan sekitar.
 * **Minat:** Tertarik pada media visual/digital, diskusi kelompok, simulasi interaktif, dan analisis isu nyata.
 * **Latar Belakang:** Berasal dari latar belakang sosial-ekonomi yang beragam yang memengaruhi pemahaman awal terhadap fenomena sosial/pancasila.
 * **Kebutuhan Belajar:**
   - *Visual:* Gambar, peta digital, video pembelajaran, dan infografis.
-  - *Auditori:* Diskusi kelompok, tanya jawab, mendengarkan paparan & kisah sejarah/sosial.
+  - *Auditori:* Diskusi kelompok, tanya jawab, penjelasan guru yang interaktif, dan mendengarkan paparan & kisah sejarah/sosial.
   - *Kinestetik:* Praktik pemetaan, bermain peran (role-play), unjuk karya, dan penyusunan produk kreatif.
 
 ### C. KARAKTERISTIK MATERI PELAJARAN
@@ -112,7 +287,7 @@ Bernalar Kritis, Gotong Royong (Kolaborasi), Mandiri, Berkebinekaan Global, dan 
 
 ### E. DESAIN DEEP LEARNING (3 ELEMEN UTAMA)
 1. **Mindful Learning (Kesadaran Utuh):**
-   Apersepsi berkesadaran di mana peserta didik diajak merefleksikan pengalaman pribadi dan menyadari pentingnya mempelajari {sub_materi}.
+   Apersepsi berkesadaran di mana peserta didik diajak merefleksikan pengalaman pribadi dan menyadari pentingnya mempelajari {str_sub_materi}.
 2. **Meaningful Learning (Pembelajaran Bermakna):**
    Materi dihubungkan langsung dengan konteks kehidupan sehari-hari dan pemecahan masalah nyata di masyarakat.
 3. **Joyful Learning (Pembelajaran Menyenangkan):**
@@ -128,7 +303,7 @@ Bernalar Kritis, Gotong Royong (Kolaborasi), Mandiri, Berkebinekaan Global, dan 
   - Orientasi Mindful Start & Refleksi Kesadaran Awal.
   - Penyampaian Tujuan Pembelajaran & Pertanyaan Pemantik Kontekstual.
 * **Kegiatan Inti ({alokasi_jp * 40 - 30} Menit):**
-  - *Eksplorasi Konsep (Mindful Exploration):* Menelaah materi {sub_materi}.
+  - *Eksplorasi Konsep (Mindful Exploration):* Menelaah materi {str_sub_materi}.
   - *Koneksi Bermakna (Meaningful Task):* Diskusi pemecahan masalah/studi kasus kontekstual secara berkolaborasi.
   - *Unjuk Karya & Refleksi (Joyful Share):* Presentasi kreatif antar kelompok dan pemberian umpan balik positif (peer review).
 * **Penutup (15 Menit):** Kesimpulan bersama, evaluasi mandiri, refleksi pembelajaran, dan tindak lanjut.
@@ -147,7 +322,7 @@ Bernalar Kritis, Gotong Royong (Kolaborasi), Mandiri, Berkebinekaan Global, dan 
             "Mata Pelajaran": mapel,
             "Kelas/Fase": fase_kelas,
             "Bab / Topik": bab_materi,
-            "Sub-Materi": sub_materi,
+            "Sub-Materi": str_sub_materi,
             "Alokasi JP": alokasi_jp,
             "Isi Lengkap Modul Ajar": modul_text
         }])
@@ -156,7 +331,7 @@ Bernalar Kritis, Gotong Royong (Kolaborasi), Mandiri, Berkebinekaan Global, dan 
         st.download_button(
             label="📥 Download Modul Ajar Standar BSKAP (Excel)",
             data=excel_data_modul,
-            file_name=f"Modul_Ajar_DeepLearning_{mapel}_{fase_kelas[:8]}.xlsx",
+            file_name=f"Modul_Ajar_DeepLearning_{mapel}_{tingkat_kelas[:8]}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
@@ -185,7 +360,7 @@ elif menu == "2. Presensi Dropdown Lintas Kelas":
     df_presensi = st.session_state[f"presensi_{selected_kelas}"]
 
     st.subheader(f"Input Presensi Manual (Dropdown) - {selected_kelas}")
-    st.info("💡 **Instruksi:** Klik sel pada kolom **P1–P5**, lalu pilih status: **H** (Hadir), **S** (Sakit), **I** (Izin), atau **A** (Alpa). Rekapitulasi `COUNTIF` akan dihitung otomatis.")
+    st.info("💡 **Tips:** Klik sel pada kolom **P1–P5**, lalu pilih status: **H** (Hadir), **S** (Sakit), **I** (Izin), atau **A** (Alpa). Kamu juga bisa menambah/mengubah nama siswa langsung pada tabel.")
 
     edited_df = st.data_editor(
         df_presensi,
