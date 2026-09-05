@@ -397,7 +397,7 @@ elif menu == "2. Presensi Dropdown Lintas Kelas":
     )
 
 # ==========================================
-# FITUR 3: BUKU NILAI & STATUS KKTP
+# FITUR 3: BUKU NILAI & STATUS KKTP (REAL-TIME UPDATE)
 # ==========================================
 else:
     st.header("📖 Buku Nilai Terpisah per Kelas & Keketatan KKTP")
@@ -405,29 +405,51 @@ else:
 
     selected_kelas_nilai = st.selectbox("Pilih Kelas Buku Nilai:", daftar_kelas, key="nilai_kelas_key")
 
+    # Inisialisasi State jika belum ada
     if f"nilai_{selected_kelas_nilai}" not in st.session_state:
         st.session_state[f"nilai_{selected_kelas_nilai}"] = pd.DataFrame({
             "NIS": ["1001", "1002", "1003", "1004", "1005"],
-            "Nama Siswa": [f"Ahmad Fauzi ({selected_kelas_nilai})", f"Budi Santoso ({selected_kelas_nilai})", f"Citra Dewi ({selected_kelas_nilai})", f"Dina Maria ({selected_kelas_nilai})", f"Eko Prasetyo ({selected_kelas_nilai})"],
-            "Formatif 1 (LKPD)": [85, 80, 90, 70, 60],
-            "Formatif 2 (Tugas)": [88, 82, 92, 75, 65],
-            "Sumatif Bab 1": [80, 78, 88, 65, 55],
-            "Sumatif Bab 2": [85, 80, 90, 70, 60],
-            "STS (Tengah Sem)": [78, 75, 85, 68, 62],
-            "SAS (Akhir Sem)": [82, 80, 88, 72, 60]
+            "Nama Siswa": [
+                f"Ahmad Fauzi ({selected_kelas_nilai})", 
+                f"Budi Santoso ({selected_kelas_nilai})", 
+                f"Citra Dewi ({selected_kelas_nilai})", 
+                f"Dina Maria ({selected_kelas_nilai})", 
+                f"Eko Prasetyo ({selected_kelas_nilai})"
+            ],
+            "Formatif 1 (LKPD)": [85.0, 80.0, 90.0, 70.0, 60.0],
+            "Formatif 2 (Tugas)": [88.0, 82.0, 92.0, 75.0, 65.0],
+            "Sumatif Bab 1": [80.0, 78.0, 88.0, 65.0, 55.0],
+            "Sumatif Bab 2": [85.0, 80.0, 90.0, 70.0, 60.0],
+            "STS (Tengah Sem)": [78.0, 75.0, 85.0, 68.0, 62.0],
+            "SAS (Akhir Sem)": [82.0, 80.0, 88.0, 72.0, 60.0]
         })
 
     df_nilai = st.session_state[f"nilai_{selected_kelas_nilai}"]
 
-    st.subheader(f"Input Nilai Siswa - {selected_kelas_nilai}")
-    edited_nilai_df = st.data_editor(df_nilai, use_container_width=True)
-    st.session_state[f"nilai_{selected_kelas_nilai}"] = edited_nilai_df
+    # Slider Batas KKTP
+    kktp_limit = st.slider("Batas Kriteria Ketercapaian Tujuan Pembelajaran (KKTP):", min_value=60, max_value=85, value=75)
 
-    # Kalkulasi Otomatis Nilai Rapor
-    edited_nilai_df["Rata Formatif"] = edited_nilai_df[["Formatif 1 (LKPD)", "Formatif 2 (Tugas)"]].mean(axis=1)
-    edited_nilai_df["Rata Sumatif Bab"] = edited_nilai_df[["Sumatif Bab 1", "Sumatif Bab 2"]].mean(axis=1)
+    st.subheader(f"Input Nilai Siswa - {selected_kelas_nilai}")
+    st.info("💡 **Petunjuk:** Ubah atau ketik nilai di kolom Formatif, Sumatif, STS, atau SAS. Hasil kalkulasi dan status KKTP di bawah akan langsung terupdate secara otomatis!")
+
+    # Input nilai melalui Data Editor
+    edited_nilai_df = st.data_editor(
+        df_nilai, 
+        use_container_width=True,
+        num_rows="dynamic",
+        key=f"editor_{selected_kelas_nilai}"
+    )
+
+    # Pastikan tipe data numerik untuk kolom penilaian
+    kolom_nilai = ["Formatif 1 (LKPD)", "Formatif 2 (Tugas)", "Sumatif Bab 1", "Sumatif Bab 2", "STS (Tengah Sem)", "SAS (Akhir Sem)"]
+    for col in kolom_nilai:
+        edited_nilai_df[col] = pd.to_numeric(edited_nilai_df[col], errors='coerce').fillna(0)
+
+    # 1. Kalkulasi Otomatis Rata-rata
+    edited_nilai_df["Rata Formatif"] = edited_nilai_df[["Formatif 1 (LKPD)", "Formatif 2 (Tugas)"]].mean(axis=1).round(1)
+    edited_nilai_df["Rata Sumatif Bab"] = edited_nilai_df[["Sumatif Bab 1", "Sumatif Bab 2"]].mean(axis=1).round(1)
     
-    # Formula Bobot (30% Formatif + 30% Sumatif Bab + 20% STS + 20% SAS)
+    # 2. Formula Bobot Nilai Akhir Rapor (30% Formatif + 30% Sumatif Bab + 20% STS + 20% SAS)
     edited_nilai_df["Nilai Akhir Rapor"] = (
         (edited_nilai_df["Rata Formatif"] * 0.3) +
         (edited_nilai_df["Rata Sumatif Bab"] * 0.3) +
@@ -435,14 +457,23 @@ else:
         (edited_nilai_df["SAS (Akhir Sem)"] * 0.2)
     ).round(0)
 
-    # Status Ketuntasan KKTP
-    kktp_limit = st.slider("Batas Kriteria Ketercapaian Tujuan Pembelajaran (KKTP):", min_value=60, max_value=85, value=75)
-    edited_nilai_df["Status KKTP"] = edited_nilai_df["Nilai Akhir Rapor"].apply(lambda val: "✅ TUNTAS" if val >= kktp_limit else "❌ REMEDIAL")
+    # 3. Status Ketuntasan KKTP
+    edited_nilai_df["Status KKTP"] = edited_nilai_df["Nilai Akhir Rapor"].apply(
+        lambda val: "✅ TUNTAS" if val >= kktp_limit else "❌ REMEDIAL"
+    )
+
+    # Simpan kembali hasil kalkulasi terbaru ke session_state
+    st.session_state[f"nilai_{selected_kelas_nilai}"] = edited_nilai_df
 
     st.subheader(f"🎯 Hasil Pengolahan Rapor & Status KKTP - {selected_kelas_nilai}")
-    st.dataframe(edited_nilai_df[["NIS", "Nama Siswa", "Rata Formatif", "Rata Sumatif Bab", "STS (Tengah Sem)", "SAS (Akhir Sem)", "Nilai Akhir Rapor", "Status KKTP"]], use_container_width=True)
+    
+    # Tampilkan tabel rekapitulasi hasil kalkulasi
+    st.dataframe(
+        edited_nilai_df[["NIS", "Nama Siswa", "Rata Formatif", "Rata Sumatif Bab", "STS (Tengah Sem)", "SAS (Akhir Sem)", "Nilai Akhir Rapor", "Status KKTP"]], 
+        use_container_width=True
+    )
 
-    # Tombol Download Excel
+    # Tombol Download Excel dengan data rekapitulasi lengkap
     excel_nilai = to_excel(edited_nilai_df, sheet_name=f"Nilai_{selected_kelas_nilai}")
     st.download_button(
         label=f"📥 Download Buku Nilai {selected_kelas_nilai} (Excel)",
