@@ -6,9 +6,61 @@ from docx import Document
 from io import BytesIO
 from datetime import date
 
-st.set_page_config(page_title="Sistem Terpadu Pembelajaran & Administrasi Guru", layout="wide")
+# ==========================================
+# 1. KONFIGURASI HALAMAN & CUSTOM STYLING (CSS)
+# ==========================================
+st.set_page_config(
+    page_title="Sistem Terpadu Pembelajaran & Administrasi Guru",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- 1. FUNGSI LOAD DATA (DENGAN PATH OTOMATIS) ---
+# Injeksi CSS untuk Tampilan Modern
+st.markdown("""
+    <style>
+    /* Styling Container & Card */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stBlock"] {
+        border-radius: 12px;
+    }
+    
+    /* Header Banner Custom */
+    .header-box {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        padding: 24px;
+        border-radius: 12px;
+        color: white;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header-box h1 {
+        color: #ffffff !important;
+        margin: 0;
+        font-size: 1.8rem;
+    }
+    .header-box p {
+        color: #e0e6ed !important;
+        margin: 5px 0 0 0;
+        font-size: 0.95rem;
+    }
+
+    /* Subheader Badges */
+    .section-badge {
+        background-color: #eef2f6;
+        color: #1e3c72;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# 2. FUNGSI LOAD DATA
+# ==========================================
 @st.cache_data
 def load_materi_json():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +80,6 @@ def load_siswa_default():
         df.columns = [c.strip() for c in df.columns]
         return df
     except Exception:
-        # Fallback jika file tidak ditemukan
         return pd.DataFrame({
             "No": range(1, 18),
             "Nama": [
@@ -45,7 +96,9 @@ def load_siswa_default():
 DATABASE_MATERI = load_materi_json()
 DF_SISWA_7A = load_siswa_default()
 
-# --- 2. INISIALISASI SESSION STATE ---
+# ==========================================
+# 3. INISIALISASI SESSION STATE
+# ==========================================
 if "presensi_data" not in st.session_state:
     df_p = DF_SISWA_7A.copy()
     df_p["Status"] = "Hadir"
@@ -60,45 +113,75 @@ if "nilai_data" not in st.session_state:
     df_n["SAS (20%)"] = 80.0
     st.session_state.nilai_data = df_n
 
-# --- 3. SIDEBAR NAVIGASI ---
-st.sidebar.title("📌 Menu Utama")
-menu = st.sidebar.radio(
-    "Pilih Fitur:",
-    ["📑 Generator Modul Ajar", "📋 Presensi Siswa (Kelas 7A)", "📊 Buku Nilai & KKTP (Kelas 7A)"]
-)
-
 # ==========================================
-# MENU 1: GENERATOR MODUL AJAR
+# 4. SIDEBAR PANEL (PROFIL GURU)
 # ==========================================
-if menu == "📑 Generator Modul Ajar":
-    st.header("📑 Generator Modul Ajar Deep Learning")
+with st.sidebar:
+    st.markdown("### 👨‍🏫 Identitas Pengajar")
+    sekolah = st.text_input("Nama Sekolah", "SMP RSUP PKB Pulau Burung")
+    penyusun = st.text_input("Nama Guru / Penyusun", "Ridho Kurniawan, S.Pd.")
     
-    if not DATABASE_MATERI:
-        st.warning("File `materi.json` belum ditemukan di direktori utama. Silakan tambahkan file `materi.json` untuk menampilkan daftar bab & subbab.")
-        mapel_selected = st.selectbox("Mata Pelajaran", ["IPS", "PPKn"])
-        kelas_selected = st.selectbox("Kelas", ["Kelas 7", "Kelas 8", "Kelas 9"])
-        bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Kehidupan Sosial dan Kondisi Lingkungan Sekitar")
-        subbab_selected = st.text_input("Sub-Materi / Subbab", "Kegiatan Ekonomi (Produksi, Distribusi, Konsumsi)")
-    else:
-        c_m1, c_m2 = st.columns(2)
-        with c_m1:
-            mapel_selected = st.selectbox("Pilih Mata Pelajaran", list(DATABASE_MATERI.keys()))
-            kelas_selected = st.selectbox("Pilih Kelas", list(DATABASE_MATERI[mapel_selected].keys()))
-        
-        bab_dict = DATABASE_MATERI[mapel_selected][kelas_selected]
-        with c_m2:
-            bab_selected = st.selectbox("Pilih Bab / Tema Utama", list(bab_dict.keys()))
-            subbab_selected = st.selectbox("Pilih Sub-Materi / Subbab", bab_dict[bab_selected])
+    st.divider()
+    st.markdown("### 🗓️ Setting Semester")
+    tahun = st.text_input("Tahun Pelajaran", "2026/2027")
+    semester = st.selectbox("Semester", ["Ganjil", "Genap"])
+    
+    st.divider()
+    st.caption("✨ **Aplikasi Administrasi Guru**\nKurikulum Merdeka BSKAP 2025")
 
-    st.subheader("⚙️ Identitas & Informasi Pembelajaran")
-    col1, col2 = st.columns(2)
-    with col1:
-        sekolah = st.text_input("Nama Sekolah", "SMP RSUP PKB Pulau Burung")
-        penyusun = st.text_input("Nama Penyusun", "Ridho Kurniawan, S.Pd.")
-    with col2:
-        tahun = st.text_input("Tahun Pelajaran", "2026/2027")
-        semester = st.selectbox("Semester", ["Ganjil", "Genap"])
-        alokasi = st.text_input("Alokasi Waktu", "2 JP (2 Pertemuan x 1 JP)")
+# ==========================================
+# 5. HEADER BANNER
+# ==========================================
+st.markdown(f"""
+    <div class="header-box">
+        <h1>🎓 Portal Administrasi & Pembelajaran Guru</h1>
+        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} ({tahun} - Semester {semester})</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# 6. TAB NAVIGASI UTAMA
+# ==========================================
+tab1, tab2, tab3 = st.tabs([
+    "📑 Generator Modul Ajar", 
+    "📋 Presensi Siswa", 
+    "📊 Buku Nilai & KKTP"
+])
+
+# ------------------------------------------
+# TAB 1: GENERATOR MODUL AJAR
+# ------------------------------------------
+with tab1:
+    st.markdown("<span class=\"section-badge\">LANGKAH 1 DARI 2</span>", unsafe_allow_html=True)
+    st.subheader("Konfigurasi Modul Ajar")
+    
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        with st.container(border=True):
+            st.markdown("#### 📚 Pemilihan Kurikulum & Materi")
+            if not DATABASE_MATERI:
+                st.warning("⚠️ File `materi.json` belum terdeteksi. Menggunakan mode manual.")
+                mapel_selected = st.selectbox("Mata Pelajaran", ["IPS", "PPKn"])
+                kelas_selected = st.selectbox("Kelas", ["Kelas 7", "Kelas 8", "Kelas 9"])
+                bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Kehidupan Sosial")
+                subbab_selected = st.text_input("Sub-Materi / Subbab", "Interaksi Sosial")
+            else:
+                mapel_selected = st.selectbox("Mata Pelajaran", list(DATABASE_MATERI.keys()))
+                kelas_selected = st.selectbox("Kelas", list(DATABASE_MATERI[mapel_selected].keys()))
+                
+                bab_dict = DATABASE_MATERI[mapel_selected][kelas_selected]
+                bab_selected = st.selectbox("Bab / Tema Utama", list(bab_dict.keys()))
+                subbab_selected = st.selectbox("Sub-Materi / Subbab", bab_dict[bab_selected])
+
+    with col_b:
+        with st.container(border=True):
+            st.markdown("#### ⚙️ Setting Pembelajaran")
+            alokasi = st.text_input("Alokasi Waktu", "2 JP (2 Pertemuan x 1 JP)")
+            st.info("💡 Modul ini dibuat menggunakan format **Deep Learning Model** (Mindful, Meaningful, & Joyful Learning).")
+
+    st.markdown("<span class=\"section-badge\">LANGKAH 2 DARI 2</span>", unsafe_allow_html=True)
+    st.subheader("Pratinjau & Unduh Modul")
 
     modul_text = f"""MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING MODEL)
 MATA PELAJARAN: {mapel_selected.upper()}
@@ -168,8 +251,8 @@ V. LAMPIRAN (LKPD DEEP LEARNING & RUBRIK)
  ( .................................... )                  ({penyusun})
 """
 
-    st.subheader("📄 Pratinjau Teks Modul Ajar")
-    st.text_area("Hasil Teks Modul", modul_text, height=350)
+    with st.expander("📄 Klik untuk Pratinjau Teks Dokumen", expanded=False):
+        st.text_area("Isi Teks", modul_text, height=250)
 
     def export_word(text):
         doc = Document()
@@ -189,46 +272,51 @@ V. LAMPIRAN (LKPD DEEP LEARNING & RUBRIK)
         label="📥 Download Modul Ajar (.docx)",
         data=export_word(modul_text),
         file_name=f"Modul_Ajar_{mapel_selected}_{kelas_selected}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        type="primary"
     )
 
-# ==========================================
-# MENU 2: PRESENSI SISWA
-# ==========================================
-elif menu == "📋 Presensi Siswa (Kelas 7A)":
-    st.header("📋 Presensi Harian Siswa - Kelas 7A")
-    
-    tgl_presensi = st.date_input("Tanggal Presensi", date.today())
-    st.info(f"Total Siswa Terdaftar: **{len(st.session_state.presensi_data)} Siswa**")
+# ------------------------------------------
+# TAB 2: PRESENSI SISWA
+# ------------------------------------------
+with tab2:
+    col_p_title, col_p_date = st.columns([3, 1])
+    with col_p_title:
+        st.subheader("📋 Lembar Presensi Harian Siswa (Kelas 7A)")
+    with col_p_date:
+        tgl_presensi = st.date_input("Tanggal Presensi", date.today())
 
-    edited_presensi = st.data_editor(
-        st.session_state.presensi_data,
-        column_config={
-            "No": st.column_config.NumberColumn("No", disabled=True),
-            "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True),
-            "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True),
-            "Status": st.column_config.SelectboxColumn(
-                "Status Kehadiran",
-                options=["Hadir", "Sakit", "Izin", "Alpha"],
-                required=True
-            ),
-            "Keterangan": st.column_config.TextColumn("Keterangan Tambahan")
-        },
-        disabled=["No", "Nama", "Jenis Kelamin"],
-        hide_index=True,
-        use_container_width=True
-    )
-    
-    st.session_state.presensi_data = edited_presensi
+    with st.container(border=True):
+        edited_presensi = st.data_editor(
+            st.session_state.presensi_data,
+            column_config={
+                "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
+                "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
+                "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
+                "Status": st.column_config.SelectboxColumn(
+                    "Status Kehadiran",
+                    options=["Hadir", "Sakit", "Izin", "Alpha"],
+                    required=True,
+                    width="medium"
+                ),
+                "Keterangan": st.column_config.TextColumn("Keterangan", width="large")
+            },
+            disabled=["No", "Nama", "Jenis Kelamin"],
+            hide_index=True,
+            use_container_width=True
+        )
+        st.session_state.presensi_data = edited_presensi
 
-    st.subheader("📊 Ringkasan Kehadiran Hari Ini")
+    # STATISTIK KARTU METRIK
+    st.markdown("#### 📊 Statistik Kehadiran Hari Ini")
     rekap = edited_presensi["Status"].value_counts()
-    col_r1, col_r2, col_r3, col_r4 = st.columns(4)
-    col_r1.metric("Hadir", rekap.get("Hadir", 0))
-    col_r2.metric("Sakit", rekap.get("Sakit", 0))
-    col_r3.metric("Izin", rekap.get("Izin", 0))
-    col_r4.metric("Alpha", rekap.get("Alpha", 0))
+    r1, r2, r3, r4 = st.columns(4)
+    r1.metric("Hadir", f"{rekap.get('Hadir', 0)} Siswa", delta="🟢 Sempurna" if rekap.get('Hadir', 0) == len(edited_presensi) else None)
+    r2.metric("Sakit", f"{rekap.get('Sakit', 0)} Siswa")
+    r3.metric("Izin", f"{rekap.get('Izin', 0)} Siswa")
+    r4.metric("Alpha", f"{rekap.get('Alpha', 0)} Siswa", delta_color="inverse")
 
+    st.divider()
     csv_presensi = edited_presensi.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Unduh Rekap Presensi (CSV)",
@@ -237,33 +325,37 @@ elif menu == "📋 Presensi Siswa (Kelas 7A)":
         mime="text/csv"
     )
 
-# ==========================================
-# MENU 3: BUKU NILAI & KKTP
-# ==========================================
-elif menu == "📊 Buku Nilai & KKTP (Kelas 7A)":
-    st.header("📊 Buku Nilai & Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)")
-    st.caption("Pembobotan Nilai Akhir: Formatif (30%), Sumatif (30%), STS (20%), SAS (20%). Batas KKTP: 75")
-
-    kktp_limit = st.number_input("Batas Minimal KKTP", min_value=50.0, max_value=100.0, value=75.0, step=1.0)
-
-    edited_nilai = st.data_editor(
-        st.session_state.nilai_data,
-        column_config={
-            "No": st.column_config.NumberColumn("No", disabled=True),
-            "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True),
-            "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True),
-            "Formatif (30%)": st.column_config.NumberColumn("Nilai Formatif", min_value=0, max_value=100),
-            "Sumatif (30%)": st.column_config.NumberColumn("Nilai Sumatif", min_value=0, max_value=100),
-            "STS (20%)": st.column_config.NumberColumn("Nilai STS", min_value=0, max_value=100),
-            "SAS (20%)": st.column_config.NumberColumn("Nilai SAS", min_value=0, max_value=100)
-        },
-        disabled=["No", "Nama", "Jenis Kelamin"],
-        hide_index=True,
-        use_container_width=True
-    )
+# ------------------------------------------
+# TAB 3: BUKU NILAI & KKTP
+# ------------------------------------------
+with tab3:
+    st.subheader("📊 Buku Nilai Rapor & Kriteria Ketercapaian (KKTP)")
     
-    st.session_state.nilai_data = edited_nilai
+    col_kktp, col_info = st.columns([1, 2])
+    with col_kktp:
+        kktp_limit = st.number_input("Batas Minimal KKTP", min_value=50.0, max_value=100.0, value=75.0, step=1.0)
+    with col_info:
+        st.info("ℹ️ **Formulasi Bobot Nilai:** Formatif (30%) + Sumatif (30%) + STS (20%) + SAS (20%)")
 
+    with st.container(border=True):
+        edited_nilai = st.data_editor(
+            st.session_state.nilai_data,
+            column_config={
+                "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
+                "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
+                "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
+                "Formatif (30%)": st.column_config.NumberColumn("Formatif", min_value=0, max_value=100),
+                "Sumatif (30%)": st.column_config.NumberColumn("Sumatif", min_value=0, max_value=100),
+                "STS (20%)": st.column_config.NumberColumn("STS", min_value=0, max_value=100),
+                "SAS (20%)": st.column_config.NumberColumn("SAS", min_value=0, max_value=100)
+            },
+            disabled=["No", "Nama", "Jenis Kelamin"],
+            hide_index=True,
+            use_container_width=True
+        )
+        st.session_state.nilai_data = edited_nilai
+
+    # OLAHTA HASHIL LEGER
     df_hasil = edited_nilai.copy()
     df_hasil["Nilai Akhir"] = (
         df_hasil["Formatif (30%)"] * 0.3 +
@@ -273,12 +365,21 @@ elif menu == "📊 Buku Nilai & KKTP (Kelas 7A)":
     ).round(2)
 
     df_hasil["Status KKTP"] = df_hasil["Nilai Akhir"].apply(
-        lambda x: "Tercapai" if x >= kktp_limit else "Perlu Bimbingan"
+        lambda x: "✅ Tercapai" if x >= kktp_limit else "⚠️ Perlu Bimbingan"
     )
 
-    st.subheader("📋 Hasil Perhitungan Nilai Rapor Kelas 7A")
-    st.dataframe(df_hasil[["No", "Nama", "Jenis Kelamin", "Nilai Akhir", "Status KKTP"]], use_container_width=True, hide_index=True)
+    st.markdown("#### 📋 Leger Ringkasan Nilai Akhir Rapor")
+    st.dataframe(
+        df_hasil[["No", "Nama", "Jenis Kelamin", "Nilai Akhir", "Status KKTP"]],
+        column_config={
+            "Nilai Akhir": st.column_config.NumberColumn("Nilai Akhir Rapor", format="%.2f"),
+            "Status KKTP": st.column_config.TextColumn("Status Ketercapaian KKTP")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
 
+    st.divider()
     csv_nilai = df_hasil.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Unduh Leger Nilai (CSV)",
