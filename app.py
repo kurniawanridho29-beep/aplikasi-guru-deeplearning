@@ -56,7 +56,6 @@ st.markdown("""
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Mengambil SPREADSHEET_ID dari Secrets
 if "SPREADSHEET_ID" in st.secrets:
     SPREADSHEET_ID = st.secrets["SPREADSHEET_ID"]
 else:
@@ -99,7 +98,6 @@ def load_materi_json():
         return {}
 
 def get_data_siswa(kelas_nama):
-    """Membaca CSV berdasarkan variasi nama file"""
     nama_clean = kelas_nama.lower().replace(" ", "")
     possible_files = [
         f"{nama_clean}.csv",
@@ -170,7 +168,14 @@ with st.sidebar:
     st.caption("✨ **Aplikasi Administrasi Guru**\nKurikulum Merdeka BSKAP 2025")
 
 DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
-JUMLAH_KOLOM_NILAI = 10
+JUMLAH_KOLOM_NILAI = 15
+KATEGORI_NILAI_OPSI = [
+    "Tugas Individu", 
+    "Tugas Kelompok", 
+    "Projek / Praktik", 
+    "UTS / Mid Semester", 
+    "UAS / Akhir Semester"
+]
 
 # ==========================================
 # 6. SINKRONISASI DATAFRAME
@@ -187,7 +192,7 @@ if key_p not in st.session_state:
 if key_n not in st.session_state:
     df_n = DF_SISWA_AKTIF.copy()
     for i in range(1, JUMLAH_KOLOM_NILAI + 1):
-        df_n[f"N{i}"] = None
+        df_n[f"Nilai {i}"] = None
     st.session_state[key_n] = df_n
 
 # ==========================================
@@ -340,38 +345,77 @@ with tab2:
     )
 
 # ------------------------------------------
-# TAB 3: BUKU NILAI
+# TAB 3: BUKU NILAI & KKTP
 # ------------------------------------------
 with tab3:
-    st.subheader(f"📊 Buku Nilai Siswa ({kelas_aktif})")
+    st.subheader(f"📊 Buku Nilai & Akumulasi Realtime ({kelas_aktif})")
+    
+    st.markdown("#### ⚙️ Pengaturan Kategori Tugas & Penilaian")
+    st.caption("Pilih kategori penilaian untuk setiap kolom nilai di bawah ini:")
+    
+    # Pengaturan Opsi Jenis Nilai untuk setiap Kolom (Dalam Ekspander)
+    with st.expander("📌 Kustomisasi Kategori Jenis Nilai tiap Kolom", expanded=False):
+        kategori_cols = st.columns(5)
+        kategori_terpilih = {}
+        for idx in range(1, JUMLAH_KOLOM_NILAI + 1):
+            col_idx = (idx - 1) % 5
+            with kategori_cols[col_idx]:
+                kategori_terpilih[f"Nilai {idx}"] = st.selectbox(
+                    f"Kolom Nilai {idx}",
+                    options=KATEGORI_NILAI_OPSI,
+                    index=0 if idx <= 5 else (1 if idx <= 10 else 2),
+                    key=f"kat_{kelas_aktif}_{idx}"
+                )
+
+    # Menyiapkan DataFrame untuk Pengeditan
+    df_nilai_current = st.session_state[key_n].copy()
+    
+    # Konfigurasi Tampilan Tabel
     column_config_n = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
-    for idx in range(1, JUMLAH_KOLOM_NILAI + 1):
-        column_config_n[f"N{idx}"] = st.column_config.NumberColumn(
-            f"N{idx}",
+    
+    kolom_nilai_keys = [f"Nilai {i}" for i in range(1, JUMLAH_KOLOM_NILAI + 1)]
+    
+    for k in kolom_nilai_keys:
+        kat_label = kategori_terpilih.get(k, "Tugas")
+        column_config_n[k] = st.column_config.NumberColumn(
+            f"{k} ({kat_label})",
             min_value=0.0,
             max_value=100.0,
             format="%.1f",
             width="medium"
         )
+    
+    # Menghitung Nilai Akhir Secara Realtime (Rata-Rata)
+    df_numeric = df_nilai_current[kolom_nilai_keys].apply(pd.to_numeric, errors='coerce')
+    df_nilai_current["Nilai Akhir (Akumulasi)"] = df_numeric.mean(axis=1).round(2)
+    
+    column_config_n["Nilai Akhir (Akumulasi)"] = st.column_config.NumberColumn(
+        "📊 Nilai Akhir (Rata-Rata)",
+        disabled=True,
+        format="%.2f",
+        width="medium"
+    )
 
     edited_n = st.data_editor(
-        st.session_state[key_n],
+        df_nilai_current,
         column_config=column_config_n,
-        disabled=["No", "Nama", "Jenis Kelamin"],
+        disabled=["No", "Nama", "Jenis Kelamin", "Nilai Akhir (Akumulasi)"],
         hide_index=True,
         use_container_width=True,
         key=f"editor_n_{kelas_aktif}"
     )
-    st.session_state[key_n] = edited_n
+    
+    # Simpan kembali ke Session State
+    st.session_state[key_n] = edited_n[DF_SISWA_AKTIF.columns.tolist() + kolom_nilai_keys]
 
     st.divider()
     csv_nilai = edited_n.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label=f"📥 Unduh CSV Nilai ({kelas_aktif})",
+        label=f"📥 Unduh CSV Nilai & Akumulasi ({kelas_aktif})",
         data=csv_nilai,
         file_name=f"Nilai_{kelas_aktif}.csv",
         mime="text/csv",
