@@ -362,6 +362,7 @@ def hitung_kktp_dataframe(df, kktp_val):
 
 # =============================================================================
 # FITUR 1: GENERATOR MODUL AJAR (1 PERTEMUAN UTUH - DEEP LEARNING)
+# REVISI: Penyesuaian presisi sub-materi terpilih pada alur Deep Learning
 # =============================================================================
 if menu == "1. Generator Modul Ajar (Deep Learning)":
     st.header("⚡ Generator Modul Ajar Lengkap (1 Pertemuan Utuh)")
@@ -390,7 +391,16 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
             options=pilihan_sub_materi,
             default=pilihan_sub_materi[:1] if pilihan_sub_materi else []
         )
-        str_sub_materi = ", ".join(sub_materi_terpilih) if sub_materi_terpilih else "Materi Pokok"
+        
+        # Pengolahan teks sub-materi terpilih secara presisi
+        if sub_materi_terpilih:
+            str_sub_materi = ", ".join(sub_materi_terpilih)
+            list_sub_materi_bullet = "\n".join([f"   * {item}" for item in sub_materi_terpilih])
+            fokus_sub_materi_utama = sub_materi_terpilih[0]
+        else:
+            str_sub_materi = "Materi Pokok Pembelajaran"
+            list_sub_materi_bullet = "   * Materi Pokok Pembelajaran"
+            fokus_sub_materi_utama = "Materi Pokok Pembelajaran"
 
         jam_terpilih = st.multiselect(
             "Pilih Jam Pelajaran untuk Pertemuan Ini:",
@@ -402,6 +412,8 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
     if st.button("🚀 Generate Modul Ajar (1 Pertemuan Utuh)", type="primary", use_container_width=True):
         if not jam_terpilih:
             st.error("❌ Silakan pilih minimal 1 jam pelajaran!")
+        elif not sub_materi_terpilih:
+            st.warning("⚠️ Silakan pilih minimal 1 sub-materi pembelajaran!")
         else:
             total_jp = len(jam_terpilih)
             waktu_mulai = DATA_JAM_SEKOLAH[jam_terpilih[0]]["waktu"].split(" - ")[0]
@@ -436,90 +448,93 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 * **Waktu Pelaksanaan:** Pukul {waktu_mulai} - {waktu_selesai} WIB
 * **Alokasi Waktu:** {total_jp} JP (Total Durasi Efektif: {total_menit} Menit)
 * **Bab / Tema Utama:** {bab_materi}
-* **Sub-Materi Pembelajaran:** {str_sub_materi}
+* **Sub-Materi Pembelajaran Hari Ini:**
+{list_sub_materi_bullet}
 * **Tahun Pelajaran:** {tahun_ajaran}
 
 ### B. KOMPETENSI AWAL
-1. Peserta didik telah memiliki pemahaman dasar terkait kehidupan sosial dan lingkungan sekitar.
-2. Peserta didik memiliki kemampuan awal dalam mengidentifikasi fenomena sosial/pancasila di kehidupan sehari-hari.
+1. Peserta didik telah memiliki pemahaman awal terkait isu dasar pada topik **{bab_materi}**.
+2. Peserta didik secara umum telah mengenal aspek fenomena nyata mengenai **{str_sub_materi}** dalam konteks kehidupan bermasyarakat.
 
 ### C. PROFIL PELAJAR PANCASILA
-* **Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia:** Menghargai norma dan nilai kemanusiaan.
-* **Bernalar Kritis:** Mampu menganalisis fenomena dan masalah kontekstual secara logis.
-* **Gotong Royong:** Berkolaborasi aktif dalam diskusi kelompok dan pemecahan masalah.
+* **Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia:** Menunjukkan integritas, etika, dan penghormatan atas nilai-nilai kemanusiaan saat mengkaji topik **{fokus_sub_materi_utama}**.
+* **Bernalar Kritis:** Mengolah informasi, menganalisis argumentasi, serta mengevaluasi isu kontekstual seputar **{str_sub_materi}** secara tajam dan objektif.
+* **Gotong Royong:** Berkolaborasi secara aktif, komunikatif, dan responsif dalam diskusi kelompok pemecahan masalah.
 
 ### D. SARANA DAN PRASARANA
-* **Media:** Laptop, Proyektor, Slide Presentasi, Artikel Studi Kasus, Lembar Kerja Peserta Didik (LKPD).
-* **Sumber Belajar:** Buku Paket Siswa Kurikulum Merdeka {mapel}, Artikel Lingkungan Sekitar.
+* **Media Pembelajaran:** Laptop, Proyektor, Slide Presentasi Interaktif, Lembar Kerja Peserta Didik (LKPD), Studi Kasus Kontekstual.
+* **Sumber Belajar:** Buku Cetak Siswa {mapel} Kurikulum Merdeka, Artikel Berita/Jurnal Kebijakan Terkait **{fokus_sub_materi_utama}**.
 
 ### E. TARGET PESERTA DIDIK & MODEL
-* **Target:** Peserta didik reguler / tipikal.
-* **Model Pembelajaran:** *Deep Learning Model* (Mindful, Meaningful, & Joyful Learning) dengan pendekatan *Problem-Based Learning*.
+* **Target Peserta Didik:** Peserta didik reguler / tipikal.
+* **Model Pembelajaran:** *Deep Learning Model* (Mindful, Meaningful, & Joyful Learning) berbasis *Problem-Based Learning* (PBL).
 
 ---
 
 ## II. KOMPONEN INTI
 
 ### A. TUJUAN PEMBELAJARAN (TP)
-1. Peserta didik mampu mendeskripsikan dan menganalisis konsep {str_sub_materi} secara kritis.
-2. Peserta didik mampu mengidentifikasi serta memecahkan masalah kontekstual yang berkaitan dengan {bab_materi}.
-3. Peserta didik mampu menyajikan hasil analisis kelompok melalui presentasi interaktif secara komunikatif.
+1. Peserta didik mampu menguraikan dan menganalisis secara mendalam konsep **{str_sub_materi}** berbasis data dan fakta kontekstual.
+2. Peserta didik mampu mengidentifikasi akar permasalahan serta merumuskan alternatif solusi kritis terkait isu **{fokus_sub_materi_utama}**.
+3. Peserta didik mampu menyajikan hasil sintesis dan diskusi kelompok mengenai **{str_sub_materi}** melalui presentasi interaktif dengan percaya diri.
 
 ### B. PEMAHAMAN BERMAKNA (MEANINGFUL LEARNING)
-* Memahami {str_sub_materi} membantu peserta didik menyadari peran aktifnya sebagai warga negara yang kritis, bijak, dan bertanggung jawab.
+* Mempelajari **{str_sub_materi}** memberikan pemahaman mendalam bahwa pemahaman terhadap **{bab_materi}** bukan sekadar hafalan teori, melainkan landasan penting untuk mengambil tindakan bijak dan bertanggung jawab dalam kehidupan sehari-hari.
 
 ### C. PERTANYAAN PEMANTIK
-1. *Mengapa fenomena {str_sub_materi} sangat dekat dengan kehidupan sehari-hari kita?*
-2. *Sikap apa yang harus kita tunjukkan saat menghadapi isu {bab_materi} di masyarakat?*
+1. *Bagaimana keberadaan atau fenomena **{fokus_sub_materi_utama}** secara langsung memengaruhi kehidupan kita sehari-hari?*
+2. *Solusi atau gagasan nyata apa yang bisa kita tawarkan sebagai pelajar dalam menyikapi isu **{str_sub_materi}** di lingkungan sekitar?*
 
 ---
 
 ## III. KEGIATAN PEMBELAJARAN (PERTEMUAN TUNGGAL - {total_jp} JP)
 {catatan_zuhur}
 ### A. PENDAHULUAN ({menit_awal} MENIT) - *Mindful Start*
-1. **Pembukaan & Orientasi:** Guru menyapa peserta didik, memimpin doa bersama, dan mengecek kehadiran.
-2. **Apersepsi & Motivasi:** Guru mengaitkan materi **{str_sub_materi}** dengan pengalaman atau pengamatan sehari-hari peserta didik.
-3. **Penyampaian Tujuan:** Guru menjelaskan tujuan pembelajaran, alokasi waktu, serta skenario kegiatan pertemuan hari ini.
-4. **Pertanyaan Pemantik:** Guru menyampaikan pertanyaan pemantik untuk memicu keterlibatan aktif siswa.
+1. **Pembukaan & Orientasi:** Guru menyapa siswa hangat, memimpin doa, mengecek kesiapan belajar, dan memeriksa presensi.
+2. **Apersepsi Mindful:** Guru mengajak siswa melakukan komparasi singkat antara pengetahuan awal mereka dengan fenomena riil **{fokus_sub_materi_utama}**.
+3. **Penyampaian Tujuan:** Guru memaparkan tujuan pembelajaran hari ini, tahapan kegiatan, serta bentuk penilaian fokus sub-materi **{str_sub_materi}**.
+4. **Pertanyaan Pemantik:** Guru melemparkan pertanyaan pemantik untuk memicu minat dan daya kritis siswa terhadap topik **{str_sub_materi}**.
 
 ### B. KEGIATAN INTI ({menit_inti} MENIT) - *Meaningful & Joyful Learning*
-1. **Eksplorasi Konsep (~15-20 Menit):** 
-   * Peserta didik mengamati tayangan/studi kasus nyata mengenai **{str_sub_materi}**.
-   * Guru memberikan penguatan awal konsep dasar terkait **{bab_materi}**.
-2. **Kolaborasi Kelompok (~{max(menit_inti - 35, 10)} Menit):** 
-   * Peserta didik dibagi ke dalam kelompok heterogen (4-5 siswa).
-   * Kelompok berdiskusi menyelesaikan analisis kasus pada LKPD terkait **{str_sub_materi}**.
-   * Guru mengobservasi dan memberikan bimbingan (*scaffolding*) sesuai kebutuhan kelompok.
-   *(Jika kegiatan melewati pukul 12:10 WIB, diskusi diistirahatkan sejenak untuk Shalat Zuhur).*
-3. **Unjuk Karya & Pleno (~15-20 Menit):** 
-   * Perwakilan kelompok mempresentasikan hasil solusi/diskusi di depan kelas.
-   * Kelompok lain memberikan masukan dan tanggapan secara kritis dan santun.
+1. **Eksplorasi Konsep & Orientasi Masalah (~15-20 Menit):** 
+   * Peserta didik mencermati tayangan visual/studi kasus faktual mengenai **{fokus_sub_materi_utama}**.
+   * Guru memfasilitasi penjelajahan konsep dasar terkait sub-materi **{str_sub_materi}** secara dialogis dan interaktif.
+2. **Kolaborasi Kelompok & Penyelidikan (~{max(menit_inti - 35, 10)} Menit):** 
+   * Peserta didik dibagi ke dalam kelompok kecil heterogen (4-5 siswa).
+   * Masing-masing kelompok mendalami lembar kerja (LKPD) yang memuat problematik nyata terkait **{str_sub_materi}**.
+   * Guru melakukan pendampingan terarah (*scaffolding*) pada kelompok yang membutuhkan penguatan pemahaman.
+   *(Jika sesi pembelajaran melewati pukul 12:10 WIB, diskusi diistirahatkan sejenak untuk pelaksanaan Shalat Zuhur).*
+3. **Unjuk Karya & Diskusi Pleno (~15-20 Menit):** 
+   * Perwakilan kelompok mempresentasikan analisis dan rekomendasi solusi sub-materi **{str_sub_materi}** di depan kelas.
+   * Kelompok lain memberikan tanggapan, sanggahan santun, atau pertanyaan konstruktif (*Joyful interaction*).
 
 ### C. PENUTUP ({menit_akhir} MENIT) - *Deep Reflection*
-1. **Rangkuman & Kesimpulan:** Guru bersama peserta didik menyimpulkan poin utama materi **{str_sub_materi}**.
-2. **Refleksi Pembelajaran:** Peserta didik mengisi lembar refleksi singkat tentang proses belajar hari ini.
-3. **Apresiasi & Penutup:** Guru memberikan apresiasi, menyampaikan rencana materi minggu depan, dan mengakhiri dengan doa bersama.
+1. **Sintesis & Rangkuman:** Guru bersama siswa merangkum poin kunci dan kesimpulan utama dari pembahasan **{str_sub_materi}**.
+2. **Refleksi Deep Learning:** Peserta didik merefleksikan proses belajar: *Apa pemahaman baru terbesar yang saya dapatkan dari sub-materi {fokus_sub_materi_utama}?*
+3. **Apresiasi & Tindak Lanjut:** Guru memberikan apresiasi atas partisipasi aktif kelas, menyampaikan pengantar materi untuk pertemuan berikutnya, dan menutup dengan doa bersama.
 
 ---
 
 ## IV. ASESMEN & EVALUASI
-1. **Asesmen Sikap:** Observasi Profil Pelajar Pancasila (Bernalar Kritis, Gotong Royong).
-2. **Asesmen Formatif:** Penilaian kinerja diskusi kelompok dan pengerjaan LKPD.
-3. **Asesmen Performa:** Rubrik penilaian presentasi kelompok.
+1. **Asesmen Sikap:** Lembar Observasi Profil Pelajar Pancasila (Fokus: Bernalar Kritis & Gotong Royong).
+2. **Asesmen Formatif (Proses):** Penilaian keaktifan diskusi kelompok dan kelengkapan analisis LKPD topik **{str_sub_materi}**.
+3. **Asesmen Performa (Hasil):** Rubrik penilaian presentasi kelompok (Sistematika, Penguasaan Sub-Materi, Keterampilan Komunikasi).
 
 ---
 
 ## V. LAMPIRAN (LKPD DEEP LEARNING)
 
 ### LEMBAR KERJA PESERTA DIDIK (LKPD)
-* **Kelompok:** ...........................................
+* **Nama Kelompok:** ...........................................
 * **Kelas / Hari:** {tingkat_kelas} / {hari}
-* **Materi:** {str_sub_materi}
-* **Instruksi Tugas:**
-  1. Amatilah studi kasus yang diberikan mengenai {str_sub_materi}!
-  2. Identifikasi masalah utama dan dampak yang ditimbulkannya!
-  3. Diskusikan 2-3 solusi nyata yang dapat diterapkan oleh pelajar!
-  4. Presentasikan hasil diskusimu di depan kelas!
+* **Mata Pelajaran:** {mapel}
+* **Fokus Sub-Materi:** {str_sub_materi}
+
+#### Petunjuk Pengerjaan:
+1. Bacalah artikel/studi kasus kontekstual mengenai **{fokus_sub_materi_utama}** yang telah disediakan!
+2. Analisislah isu utama yang muncul dari kasus tersebut!
+3. Diskusikan 2-3 usulan tindakan atau solusi logis yang dapat dilakukan oleh generasi muda terkait **{str_sub_materi}**!
+4. Susun hasil pemikiran kelompokmu secara rapi dan siapkan diri untuk dipresentasikan di depan kelas!
 
 ---
 **Mengetahui,**  
@@ -532,17 +547,17 @@ Kepala Sekolah
 **({nama_guru})**
         """
 
-        st.markdown(modul_text)
-        
-        word_data = to_word(modul_text)
-        nama_file_clean = mapel.replace(" ", "_").replace("(", "").replace(")", "")
-        
-        st.download_button(
-            label="📄 Download Modul Ajar Lengkap (Word / .docx)",
-            data=word_data,
-            file_name=f"Modul_Ajar_{nama_file_clean}_{tingkat_kelas[:8].replace(' ', '_')}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+            st.markdown(modul_text)
+            
+            word_data = to_word(modul_text)
+            nama_file_clean = mapel.replace(" ", "_").replace("(", "").replace(")", "")
+            
+            st.download_button(
+                label="📄 Download Modul Ajar Lengkap (Word / .docx)",
+                data=word_data,
+                file_name=f"Modul_Ajar_{nama_file_clean}_{tingkat_kelas[:8].replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
 
 # =============================================================================
 # FITUR 2: INFO JADWAL JAM SEKOLAH
@@ -683,7 +698,7 @@ else:
 
     st.download_button(
         label=f"📥 Download Rekap Buku Nilai Lengkap {selected_kelas_nilai} (Excel)",
-        data=to_excel(updated_df, sheet_name=f"Nilai_{selected_kelas_nilai}"),
-        file_name=f"Buku_Nilai_Lengkap_{selected_kelas_nilai}.xlsx",
+        data=to_excel(updated_df, f"Nilai_{selected_kelas_nilai}"),
+        file_name=f"Rekap_Nilai_{selected_kelas_nilai}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
