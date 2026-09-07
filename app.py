@@ -362,7 +362,6 @@ def hitung_kktp_dataframe(df, kktp_val):
 
 # =============================================================================
 # FITUR 1: GENERATOR MODUL AJAR (1 PERTEMUAN UTUH - DEEP LEARNING)
-# REVISI: Penyesuaian presisi sub-materi terpilih pada alur Deep Learning
 # =============================================================================
 if menu == "1. Generator Modul Ajar (Deep Learning)":
     st.header("⚡ Generator Modul Ajar Lengkap (1 Pertemuan Utuh)")
@@ -395,11 +394,11 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
         # Pengolahan teks sub-materi terpilih secara presisi
         if sub_materi_terpilih:
             str_sub_materi = ", ".join(sub_materi_terpilih)
-            list_sub_materi_bullet = "\n".join([f"   * {item}" for item in sub_materi_terpilih])
+            list_sub_materi_bullet = "\n".join([f"    * {item}" for item in sub_materi_terpilih])
             fokus_sub_materi_utama = sub_materi_terpilih[0]
         else:
             str_sub_materi = "Materi Pokok Pembelajaran"
-            list_sub_materi_bullet = "   * Materi Pokok Pembelajaran"
+            list_sub_materi_bullet = "    * Materi Pokok Pembelajaran"
             fokus_sub_materi_utama = "Materi Pokok Pembelajaran"
 
         jam_terpilih = st.multiselect(
@@ -649,7 +648,7 @@ else:
         kktp_limit = st.slider("Batas Kriteria Ketercapaian Tujuan Pembelajaran (KKTP):", min_value=60, max_value=85, value=75)
 
     if f"nilai_{selected_kelas_nilai}" not in st.session_state:
-        raw_data = pd.DataFrame({
+        st.session_state[f"nilai_{selected_kelas_nilai}"] = pd.DataFrame({
             "NIS": ["1001", "1002", "1003", "1004", "1005"],
             "Nama Siswa": [
                 f"Ahmad Fauzi ({selected_kelas_nilai})", 
@@ -663,42 +662,36 @@ else:
             "Sumatif Bab 1": [80.0, 78.0, 88.0, 65.0, 55.0],
             "Sumatif Bab 2": [85.0, 80.0, 90.0, 70.0, 60.0],
             "STS": [78.0, 75.0, 85.0, 68.0, 62.0],
-            "SAS": [82.0, 80.0, 88.0, 72.0, 60.0]
+            "SAS": [82.0, 80.0, 90.0, 72.0, 64.0]
         })
-        st.session_state[f"nilai_{selected_kelas_nilai}"] = hitung_kktp_dataframe(raw_data, kktp_limit)
 
-    df_current = st.session_state[f"nilai_{selected_kelas_nilai}"]
-    df_current = hitung_kktp_dataframe(df_current, kktp_limit)
+    df_nilai_input = st.session_state[f"nilai_{selected_kelas_nilai}"]
 
-    st.subheader(f"📊 Tabel Penilaian Rapor Lengkap - {selected_kelas_nilai}")
-    
-    edited_unified_df = st.data_editor(
-        df_current,
+    edited_nilai_df = st.data_editor(
+        df_nilai_input,
         column_config={
-            "NIS": st.column_config.TextColumn("NIS", disabled=False),
-            "Nama Siswa": st.column_config.TextColumn("Nama Siswa", disabled=False),
-            "Formatif 1 (LKPD)": st.column_config.NumberColumn("Formatif 1", min_value=0, max_value=100, step=1),
-            "Formatif 2 (Tugas)": st.column_config.NumberColumn("Formatif 2", min_value=0, max_value=100, step=1),
-            "Sumatif Bab 1": st.column_config.NumberColumn("Sumatif 1", min_value=0, max_value=100, step=1),
-            "Sumatif Bab 2": st.column_config.NumberColumn("Sumatif 2", min_value=0, max_value=100, step=1),
+            "Formatif 1 (LKPD)": st.column_config.NumberColumn("Formatif 1 (LKPD)", min_value=0, max_value=100, step=1),
+            "Formatif 2 (Tugas)": st.column_config.NumberColumn("Formatif 2 (Tugas)", min_value=0, max_value=100, step=1),
+            "Sumatif Bab 1": st.column_config.NumberColumn("Sumatif Bab 1", min_value=0, max_value=100, step=1),
+            "Sumatif Bab 2": st.column_config.NumberColumn("Sumatif Bab 2", min_value=0, max_value=100, step=1),
             "STS": st.column_config.NumberColumn("STS", min_value=0, max_value=100, step=1),
             "SAS": st.column_config.NumberColumn("SAS", min_value=0, max_value=100, step=1),
-            "Rata Formatif": st.column_config.NumberColumn("Rata Formatif", disabled=True, format="%.1f"),
-            "Rata Sumatif": st.column_config.NumberColumn("Rata Sumatif", disabled=True, format="%.1f"),
-            "Nilai Akhir Rapor": st.column_config.NumberColumn("Nilai Akhir", disabled=True, format="%d"),
-            "Status KKTP": st.column_config.TextColumn("Status KKTP", disabled=True),
         },
         num_rows="dynamic",
-        use_container_width=True,
-        key=f"editor_unified_{selected_kelas_nilai}"
+        use_container_width=True
     )
 
-    updated_df = hitung_kktp_dataframe(edited_unified_df, kktp_limit)
-    st.session_state[f"nilai_{selected_kelas_nilai}"] = updated_df
+    st.session_state[f"nilai_{selected_kelas_nilai}"] = edited_nilai_df
+
+    # Kalkulasi Otomatis Rata-rata, Nilai Akhir Rapor & KKTP
+    df_hasil_kalkulasi = hitung_kktp_dataframe(edited_nilai_df.copy(), kktp_limit)
+
+    st.subheader(f"📊 Hasil Pengolahan Nilai & Status KKTP - {selected_kelas_nilai}")
+    st.dataframe(df_hasil_kalkulasi, use_container_width=True)
 
     st.download_button(
-        label=f"📥 Download Rekap Buku Nilai Lengkap {selected_kelas_nilai} (Excel)",
-        data=to_excel(updated_df, f"Nilai_{selected_kelas_nilai}"),
-        file_name=f"Rekap_Nilai_{selected_kelas_nilai}.xlsx",
+        label=f"📥 Download Buku Nilai {selected_kelas_nilai} (Excel)",
+        data=to_excel(df_hasil_kalkulasi, f"Buku_Nilai_{selected_kelas_nilai}"),
+        file_name=f"Buku_Nilai_{selected_kelas_nilai}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
