@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import gspread
+from google.oauth2.service_account import Credentials
 from docx import Document
 from io import BytesIO
 
@@ -52,14 +54,55 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. KONFIGURASI SPREADSHEET DARI SECRETS
+# 2. SINKRONISASI GOOGLE SHEETS API
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-if "SPREADSHEET_ID" in st.secrets:
-    SPREADSHEET_ID = st.secrets["SPREADSHEET_ID"]
-else:
-    SPREADSHEET_ID = "1o-xa_G7Vt8l4wrSrPl6AVAmhr7MXJ-AVyZf35mrW1Bc"
+@st.cache_resource
+def get_gspread_client():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    if "gcp_service_account" in st.secrets:
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=scopes
+        )
+        return gspread.authorize(creds)
+    return None
+
+SPREADSHEET_ID = st.secrets.get("SPREADSHEET_ID", "1o-xa_G7Vt8l4wrSrPl6AVAmhr7MXJ-AVyZf35mrW1Bc")
+client = get_gspread_client()
+
+def load_data_from_sheet(sheet_name):
+    if client:
+        try:
+            sh = client.open_by_key(SPREADSHEET_ID)
+            worksheet = sh.worksheet(sheet_name)
+            data = worksheet.get_all_records()
+            return pd.DataFrame(data)
+        except Exception:
+            return None
+    return None
+
+def save_data_to_sheet(sheet_name, df):
+    if client:
+        try:
+            sh = client.open_by_key(SPREADSHEET_ID)
+            try:
+                worksheet = sh.worksheet(sheet_name)
+            except Exception:
+                worksheet = sh.add_worksheet(title=sheet_name, rows="100", cols="40")
+            
+            worksheet.clear()
+            df_filled = df.fillna("")
+            worksheet.update([df_filled.columns.values.tolist()] + df_filled.values.tolist())
+            return True
+        except Exception as e:
+            st.error(f"Gagal menyimpan ke Google Sheets: {e}")
+            return False
+    return False
 
 # ==========================================
 # 3. DATASET SISWA DUMMY (FALLBACK)
@@ -86,9 +129,6 @@ DUMMY_SISWA = {
     ]
 }
 
-# ==========================================
-# 4. FUNGSI READ/WRITE DATA
-# ==========================================
 def load_materi_json():
     file_path = os.path.join(BASE_DIR, "materi.json")
     try:
@@ -98,47 +138,6 @@ def load_materi_json():
         return {}
 
 def get_data_siswa(kelas_nama):
-    nama_clean = kelas_nama.lower().replace(" ", "")
-    possible_files = [
-        f"{nama_clean}.csv",
-        f"{kelas_nama.lower()}.csv",
-        f"{kelas_nama.upper()}.csv",
-        f"{kelas_nama}.csv",
-        f"{kelas_nama.replace(' ', '_')}.csv"
-    ]
-    
-    file_path = None
-    for fname in possible_files:
-        p = os.path.join(BASE_DIR, fname)
-        if os.path.exists(p):
-            file_path = p
-            break
-
-    if file_path:
-        try:
-            df = pd.read_csv(file_path, sep=None, engine="python")
-            df.columns = [str(c).strip() for c in df.columns]
-            
-            col_map = {}
-            for col in df.columns:
-                col_lower = col.lower()
-                if 'nama' in col_lower:
-                    col_map[col] = 'Nama'
-                elif col_lower in ['no', 'no.']:
-                    col_map[col] = 'No'
-                elif 'jenis' in col_lower or 'jk' in col_lower or 'kelamin' in col_lower:
-                    col_map[col] = 'Jenis Kelamin'
-            
-            df = df.rename(columns=col_map)
-            if "Nama" in df.columns:
-                if "No" not in df.columns:
-                    df.insert(0, "No", range(1, len(df) + 1))
-                if "Jenis Kelamin" not in df.columns:
-                    df["Jenis Kelamin"] = "-"
-                return df[["No", "Nama", "Jenis Kelamin"]]
-        except Exception:
-            pass
-
     list_nama = DUMMY_SISWA.get(kelas_nama, DUMMY_SISWA["Kelas 7A"])
     jk_list = ["L" if i % 2 == 0 else "P" for i in range(len(list_nama))]
     return pd.DataFrame({"No": range(1, len(list_nama) + 1), "Nama": list_nama, "Jenis Kelamin": jk_list})
@@ -146,7 +145,7 @@ def get_data_siswa(kelas_nama):
 DATABASE_MATERI = load_materi_json()
 
 # ==========================================
-# 5. SIDEBAR PANEL
+# 4. SIDEBAR PANEL
 # ==========================================
 with st.sidebar:
     st.markdown("### 👨‍🏫 Identitas Pengajar")
@@ -164,39 +163,45 @@ with st.sidebar:
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
     
     st.divider()
-    st.success(f"🟢 Spreadsheet ID Terhubung:\n`{SPREADSHEET_ID[:10]}...`")
-    st.caption("✨ **Aplikasi Administrasi Guru**\nKurikulum Merdeka BSKAP 2025")
+    if client:
+        st.success("🟢 Otentikasi Google Sheets API Aktif (Auto Sync)!")
+    else:
+        st.warning("⚠️ Google Sheets API Belum Terkonfigurasi di Secrets.")
 
 DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
 JUMLAH_KOLOM_NILAI = 15
 KATEGORI_NILAI_OPSI = [
-    "Tugas Individu", 
-    "Tugas Kelompok", 
-    "Projek / Praktik", 
-    "UTS / Mid Semester", 
-    "UAS / Akhir Semester"
+    "Tugas Individu", "Tugas Kelompok", "Projek / Praktik", "UTS / Mid Semester", "UAS / Akhir Semester"
 ]
 
 # ==========================================
-# 6. SINKRONISASI DATAFRAME
+# 5. SINKRONISASI SESSION STATE & GOOGLE SHEETS
 # ==========================================
 key_p = f"presensi_{kelas_aktif}"
 key_n = f"nilai_{kelas_aktif}"
 
 if key_p not in st.session_state:
-    df_p = DF_SISWA_AKTIF.copy()
-    for t in range(1, 32):
-        df_p[str(t)] = ""
-    st.session_state[key_p] = df_p
+    df_cloud_p = load_data_from_sheet(f"Presensi_{kelas_aktif}")
+    if df_cloud_p is not None and not df_cloud_p.empty:
+        st.session_state[key_p] = df_cloud_p
+    else:
+        df_p = DF_SISWA_AKTIF.copy()
+        for t in range(1, 32):
+            df_p[str(t)] = ""
+        st.session_state[key_p] = df_p
 
 if key_n not in st.session_state:
-    df_n = DF_SISWA_AKTIF.copy()
-    for i in range(1, JUMLAH_KOLOM_NILAI + 1):
-        df_n[f"Nilai {i}"] = None
-    st.session_state[key_n] = df_n
+    df_cloud_n = load_data_from_sheet(f"Nilai_{kelas_aktif}")
+    if df_cloud_n is not None and not df_cloud_n.empty:
+        st.session_state[key_n] = df_cloud_n
+    else:
+        df_n = DF_SISWA_AKTIF.copy()
+        for i in range(1, JUMLAH_KOLOM_NILAI + 1):
+            df_n[f"Nilai {i}"] = None
+        st.session_state[key_n] = df_n
 
 # ==========================================
-# 7. HEADER BANNER
+# 6. HEADER BANNER
 # ==========================================
 st.markdown(f"""
     <div class="header-box">
@@ -205,9 +210,6 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 8. TAB NAVIGASI UTAMA
-# ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📑 Generator Modul Ajar", 
     f"📋 Buku Presensi ({kelas_aktif})", 
@@ -218,15 +220,11 @@ tab1, tab2, tab3 = st.tabs([
 # TAB 1: GENERATOR MODUL AJAR
 # ------------------------------------------
 with tab1:
-    st.markdown("<span class=\"section-badge\">LANGKAH 1 DARI 2</span>", unsafe_allow_html=True)
     st.subheader("Konfigurasi Modul Ajar")
-    
     col_a, col_b = st.columns(2)
     with col_a:
         with st.container(border=True):
-            st.markdown("#### 📚 Pemilihan Kurikulum & Materi")
             if not DATABASE_MATERI:
-                st.warning("⚠️ File `materi.json` belum terdeteksi. Menggunakan mode manual.")
                 mapel_selected = st.selectbox("Mata Pelajaran", ["IPS", "PPKn"])
                 kelas_selected = st.selectbox("Jenjang Kelas Modul", ["Kelas 7", "Kelas 8", "Kelas 9"])
                 bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Kehidupan Sosial")
@@ -240,57 +238,17 @@ with tab1:
 
     with col_b:
         with st.container(border=True):
-            st.markdown("#### ⚙️ Setting Pembelajaran")
             alokasi = st.text_input("Alokasi Waktu", "2 JP (2 Pertemuan x 1 JP)")
-            st.info("💡 Modul ini dibuat menggunakan format **Deep Learning Model** (Mindful, Meaningful, & Joyful Learning).")
 
-    st.markdown("<span class=\"section-badge\">LANGKAH 2 DARI 2</span>", unsafe_allow_html=True)
-    st.subheader("Pratinjau & Unduh Modul")
-
-    modul_text = f"""MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING MODEL)
+    modul_text = f"""MODUL AJAR KURIKULUM MERDEKA
 MATA PELAJARAN: {mapel_selected.upper()}
-STANDAR KEPUTUSAN BSKAP NOMOR 046/H/KR/2025
-
-I. INFORMASI UMUM
-IDENTITAS MODUL
-• Nama Sekolah: {sekolah}
-• Nama Penyusun: {penyusun}
-• Mata Pelajaran: {mapel_selected}
-• Kelas / Fase / Semester: {kelas_selected} / Fase D / {semester}
-• Bab / Tema Utama: {bab_selected}
-• Sub-Materi Pembelajaran: {subbab_selected}
-• Alokasi Waktu: {alokasi}
-• Tahun Pelajaran: {tahun}
-
-II. KOMPONEN INTI
-TUJUAN PEMBELAJARAN (TP)
-1. Peserta didik mampu mendeskripsikan dan menganalisis konsep {subbab_selected} dengan tepat.
-2. Peserta didik mampu mengidentifikasi serta memecahkan masalah kontekstual yang berkaitan dengan {bab_selected}.
-
-III. KEGIATAN PEMBELAJARAN DETAIL
-PENDAHULUAN (15 MENIT) - Mindful Start
-• Pembukaan, doa, presensi, dan penyampaian tujuan pembelajaran {subbab_selected}.
-
-KEGIATAN INTI (80 MENIT) - Meaningful & Joyful Learning
-• Eksplorasi konsep studi kasus {subbab_selected}.
-• Diskusi kelompok berbasis LKPD (Discovery Learning).
-
-PENUTUP (15 MENIT) - Deep Reflection
-• Menyimpulkan poin kunci dan melakukan refleksi pembelajaran.
-
- Mengetahui,
- Kepala Sekolah {sekolah}                Guru Mata Pelajaran
-
- ( .................................... )                ({penyusun})
+• Sekolah: {sekolah} | Guru: {penyusun}
+• Kelas: {kelas_selected} | Bab: {bab_selected} | Subbab: {subbab_selected}
 """
-
     def export_word(text):
         doc = Document()
         for p in text.split('\n'):
-            if p.startswith(("I. ", "II. ", "III. ", "IV. ", "V. ")):
-                doc.add_heading(p, level=1)
-            else:
-                doc.add_paragraph(p)
+            doc.add_paragraph(p)
         buf = BytesIO()
         doc.save(buf)
         buf.seek(0)
@@ -316,33 +274,42 @@ with tab2:
         key=f"bln_{kelas_aktif}"
     )
 
+    df_p_curr = st.session_state[key_p].copy()
+    tgl_cols = [str(t) for t in range(1, 32)]
+
     col_config_p = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="medium"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
-    for t in range(1, 32):
-        col_config_p[str(t)] = st.column_config.TextColumn(str(t), width="small")
+    for t in tgl_cols:
+        col_config_p[t] = st.column_config.TextColumn(t, width="small")
+
+    df_upper = df_p_curr[tgl_cols].fillna("").apply(lambda x: x.astype(str).str.upper())
+    df_p_curr["H"] = (df_upper == "H").sum(axis=1)
+    df_p_curr["S"] = (df_upper == "S").sum(axis=1)
+    df_p_curr["I"] = (df_upper == "I").sum(axis=1)
+    df_p_curr["A"] = (df_upper == "A").sum(axis=1)
+
+    col_config_p["H"] = st.column_config.NumberColumn("H", disabled=True, width="small")
+    col_config_p["S"] = st.column_config.NumberColumn("S", disabled=True, width="small")
+    col_config_p["I"] = st.column_config.NumberColumn("I", disabled=True, width="small")
+    col_config_p["A"] = st.column_config.NumberColumn("A", disabled=True, width="small")
 
     edited_p = st.data_editor(
-        st.session_state[key_p],
+        df_p_curr,
         column_config=col_config_p,
-        disabled=["No", "Nama", "Jenis Kelamin"],
+        disabled=["No", "Nama", "Jenis Kelamin", "H", "S", "I", "A"],
         hide_index=True,
         use_container_width=True,
         key=f"editor_p_{kelas_aktif}"
     )
-    st.session_state[key_p] = edited_p
+    
+    st.session_state[key_p] = edited_p[DF_SISWA_AKTIF.columns.tolist() + tgl_cols]
 
-    st.divider()
-    csv_presensi = edited_p.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label=f"📥 Unduh CSV Presensi ({kelas_aktif})",
-        data=csv_presensi,
-        file_name=f"Presensi_{kelas_aktif}_{bulan_presensi}.csv",
-        mime="text/csv",
-        type="primary"
-    )
+    if st.button(f"💾 Simpan Presensi {kelas_aktif} ke Google Sheets", type="primary"):
+        if save_data_to_sheet(f"Presensi_{kelas_aktif}", edited_p):
+            st.success("✅ Data Presensi Berhasil Disimpan Permanen ke Google Sheets!")
 
 # ------------------------------------------
 # TAB 3: BUKU NILAI & KKTP
@@ -350,54 +317,23 @@ with tab2:
 with tab3:
     st.subheader(f"📊 Buku Nilai & Akumulasi Realtime ({kelas_aktif})")
     
-    st.markdown("#### ⚙️ Pengaturan Kategori Tugas & Penilaian")
-    st.caption("Pilih kategori penilaian untuk setiap kolom nilai di bawah ini:")
-    
-    # Pengaturan Opsi Jenis Nilai untuk setiap Kolom (Dalam Ekspander)
-    with st.expander("📌 Kustomisasi Kategori Jenis Nilai tiap Kolom", expanded=False):
-        kategori_cols = st.columns(5)
-        kategori_terpilih = {}
-        for idx in range(1, JUMLAH_KOLOM_NILAI + 1):
-            col_idx = (idx - 1) % 5
-            with kategori_cols[col_idx]:
-                kategori_terpilih[f"Nilai {idx}"] = st.selectbox(
-                    f"Kolom Nilai {idx}",
-                    options=KATEGORI_NILAI_OPSI,
-                    index=0 if idx <= 5 else (1 if idx <= 10 else 2),
-                    key=f"kat_{kelas_aktif}_{idx}"
-                )
-
-    # Menyiapkan DataFrame untuk Pengeditan
     df_nilai_current = st.session_state[key_n].copy()
-    
-    # Konfigurasi Tampilan Tabel
     column_config_n = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
-    
     kolom_nilai_keys = [f"Nilai {i}" for i in range(1, JUMLAH_KOLOM_NILAI + 1)]
     
     for k in kolom_nilai_keys:
-        kat_label = kategori_terpilih.get(k, "Tugas")
         column_config_n[k] = st.column_config.NumberColumn(
-            f"{k} ({kat_label})",
-            min_value=0.0,
-            max_value=100.0,
-            format="%.1f",
-            width="medium"
+            k, min_value=0.0, max_value=100.0, format="%.1f", width="medium"
         )
     
-    # Menghitung Nilai Akhir Secara Realtime (Rata-Rata)
     df_numeric = df_nilai_current[kolom_nilai_keys].apply(pd.to_numeric, errors='coerce')
     df_nilai_current["Nilai Akhir (Akumulasi)"] = df_numeric.mean(axis=1).round(2)
-    
     column_config_n["Nilai Akhir (Akumulasi)"] = st.column_config.NumberColumn(
-        "📊 Nilai Akhir (Rata-Rata)",
-        disabled=True,
-        format="%.2f",
-        width="medium"
+        "📊 Nilai Akhir", disabled=True, format="%.2f", width="medium"
     )
 
     edited_n = st.data_editor(
@@ -408,16 +344,8 @@ with tab3:
         use_container_width=True,
         key=f"editor_n_{kelas_aktif}"
     )
-    
-    # Simpan kembali ke Session State
     st.session_state[key_n] = edited_n[DF_SISWA_AKTIF.columns.tolist() + kolom_nilai_keys]
 
-    st.divider()
-    csv_nilai = edited_n.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label=f"📥 Unduh CSV Nilai & Akumulasi ({kelas_aktif})",
-        data=csv_nilai,
-        file_name=f"Nilai_{kelas_aktif}.csv",
-        mime="text/csv",
-        type="primary"
-    )
+    if st.button(f"💾 Simpan Nilai {kelas_aktif} ke Google Sheets", type="primary"):
+        if save_data_to_sheet(f"Nilai_{kelas_aktif}", edited_n):
+            st.success("✅ Data Nilai Berhasil Disimpan Permanen ke Google Sheets!")
