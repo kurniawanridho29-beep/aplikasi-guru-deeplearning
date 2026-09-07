@@ -391,7 +391,6 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
             default=pilihan_sub_materi[:1] if pilihan_sub_materi else []
         )
         
-        # Pengolahan teks sub-materi terpilih secara presisi
         if sub_materi_terpilih:
             str_sub_materi = ", ".join(sub_materi_terpilih)
             list_sub_materi_bullet = "\n".join([f"    * {item}" for item in sub_materi_terpilih])
@@ -407,12 +406,52 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
             default=["Jam 5", "Jam 6", "Jam 7"]
         )
 
+    # -------------------------------------------------------------------------
+    # PENGATURAN KERANGKA PEMBELAJARAN (OPSI MODEL & METODE)
+    # -------------------------------------------------------------------------
+    st.subheader("⚙️ Kerangka Pembelajaran (Model & Metode)")
+    col_k1, col_k2 = st.columns(2)
+    
+    opsi_model = [
+        "Problem-Based Learning (PBL)",
+        "Project-Based Learning (PjBL)",
+        "Discovery Learning",
+        "Inquiry Learning",
+        "Cooperative Learning (misal: Jigsaw, Group Investigation)"
+    ]
+    
+    opsi_metode = [
+        "Ceramah Interaktif",
+        "Diskusi Kelompok",
+        "Tanya Jawab",
+        "Simulasi / Bermain Peran (Role Play)",
+        "Penugasan Proyek",
+        "Pameran Karya (Gallery Walk)",
+        "Studi Kasus / Storytelling"
+    ]
+
+    with col_k1:
+        model_terpilih = st.selectbox(
+            "Pilih Model Pembelajaran Utama:",
+            options=opsi_model,
+            index=0
+        )
+
+    with col_k2:
+        metode_terpilih = st.multiselect(
+            "Pilih Kombinasi Metode Pembelajaran:",
+            options=opsi_metode,
+            default=["Ceramah Interaktif", "Diskusi Kelompok", "Tanya Jawab", "Studi Kasus / Storytelling"]
+        )
+
     st.markdown("---")
     if st.button("🚀 Generate Modul Ajar (1 Pertemuan Utuh)", type="primary", use_container_width=True):
         if not jam_terpilih:
             st.error("❌ Silakan pilih minimal 1 jam pelajaran!")
         elif not sub_materi_terpilih:
             st.warning("⚠️ Silakan pilih minimal 1 sub-materi pembelajaran!")
+        elif not metode_terpilih:
+            st.warning("⚠️ Silakan pilih minimal 1 metode pembelajaran!")
         else:
             total_jp = len(jam_terpilih)
             waktu_mulai = DATA_JAM_SEKOLAH[jam_terpilih[0]]["waktu"].split(" - ")[0]
@@ -426,6 +465,10 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 
             ada_zuhur = "Jam 5" in jam_terpilih and any(j in jam_terpilih for j in ["Jam 6", "Jam 7", "Jam 8"])
             catatan_zuhur = "\n> **Catatan Jeda:** *Pertemuan ini terpotong jeda Shalat Zuhur (12:10 - 12:30 WIB) pada transisi Jam 5 ke Jam 6.*\n" if ada_zuhur else ""
+
+            # Formatting Opsi Checklist Model & Metode
+            list_model_str = "\n".join([f"* [{'x' if m == model_terpilih else ' '}] {m}" for m in opsi_model])
+            list_metode_str = "\n".join([f"* [{'x' if m in metode_terpilih else ' '}] {m}" for m in opsi_metode])
 
             st.success(f"✅ Modul Ajar 1 Pertemuan Berhasil Dibuat! Total: {total_jp} JP ({total_menit} Menit) | {waktu_mulai} - {waktu_selesai} WIB")
 
@@ -464,9 +507,18 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 * **Media Pembelajaran:** Laptop, Proyektor, Slide Presentasi Interaktif, Lembar Kerja Peserta Didik (LKPD), Studi Kasus Kontekstual.
 * **Sumber Belajar:** Buku Cetak Siswa {mapel} Kurikulum Merdeka, Artikel Berita/Jurnal Kebijakan Terkait **{fokus_sub_materi_utama}**.
 
-### E. TARGET PESERTA DIDIK & MODEL
+### E. KERANGKA PEMBELAJARAN
+* **Model Pembelajaran** *(Pilih salah satu sesuai karakteristik materi/kegiatan)*:
+{list_model_str}
+
+* **Pendekatan Pembelajaran:**
+    * Deep Learning *(Mindful, Meaningful, & Joyful Learning)*
+
+* **Metode Pembelajaran** *(Pilih kombinasi metode yang relevan)*:
+{list_metode_str}
+
+### F. TARGET PESERTA DIDIK
 * **Target Peserta Didik:** Peserta didik reguler / tipikal.
-* **Model Pembelajaran:** *Deep Learning Model* (Mindful, Meaningful, & Joyful Learning) berbasis *Problem-Based Learning* (PBL).
 
 ---
 
@@ -497,9 +549,9 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 ### B. KEGIATAN INTI ({menit_inti} MENIT) - *Meaningful & Joyful Learning*
 1. **Eksplorasi Konsep & Orientasi Masalah (~15-20 Menit):** 
    * Peserta didik mencermati tayangan visual/studi kasus faktual mengenai **{fokus_sub_materi_utama}**.
-   * Guru memfasilitasi penjelajahan konsep dasar terkait sub-materi **{str_sub_materi}** secara dialogis dan interaktif.
+   * Guru memfasilitasi penjelajahan konsep dasar terkait sub-materi **{str_sub_materi}** secara dialogis dan interaktif menggunakan metode {', '.join(metode_terpilih)}.
 2. **Kolaborasi Kelompok & Penyelidikan (~{max(menit_inti - 35, 10)} Menit):** 
-   * Peserta didik dibagi ke dalam kelompok kecil heterogen (4-5 siswa).
+   * Peserta didik dibagi ke dalam kelompok kecil heterogen (4-5 siswa) menerapkan sintaks **{model_terpilih}**.
    * Masing-masing kelompok mendalami lembar kerja (LKPD) yang memuat problematik nyata terkait **{str_sub_materi}**.
    * Guru melakukan pendampingan terarah (*scaffolding*) pada kelompok yang membutuhkan penguatan pemahaman.
    *(Jika sesi pembelajaran melewati pukul 12:10 WIB, diskusi diistirahatkan sejenak untuk pelaksanaan Shalat Zuhur).*
