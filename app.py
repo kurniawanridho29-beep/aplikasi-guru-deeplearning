@@ -59,7 +59,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. FUNGSI LOAD DATA
+# 2. DATASET SISWA DUMMY (FALLBACK)
+# ==========================================
+DUMMY_SISWA = {
+    "Kelas 7A": [
+        "Aditya Naufal Pratama", "Zidan Al Fatir", "Atika Zahara Ratifa", "Ayu Azka Fariha",
+        "Dini Khoirunisa", "Enjelita Laia", "Ervan Martio Armana", "Farisman Lase", "Fauzia",
+        "Hendriyanto", "M Sahel Habibillah", "Okta Dita Pranata", "Rahmad Ramadhani",
+        "Yuda Agustian FitRoh", "Yulia Ramadhani", "Marveltus Hia", "Muhammad Rhaehan A"
+    ],
+    "Kelas 7B": [
+        "Ahmad Albar", "Bagas Saputra", "Citra Kirana", "Dedi Kurniawan", "Eka Putri",
+        "Fahri Hamzah", "Gita Gutawa", "Hafiz Ridho", "Indah Permata", "Joko Susilo",
+        "Kurnia Dewi", "Lutfi Hakim", "M. Rizky Pratama", "Nabila Syakieb", "Oki Setiana"
+    ],
+    "Kelas 8": [
+        "Andi Wijaya", "Budi Santoso", "Cici Paramida", "Doni Monardo", "Eva Celia",
+        "Fajar Sadboy", "Grace Natalie", "Hendra Setiawan", "Irfan Bachdim", "Joni Suprianto",
+        "Kiki Amalia", "Lesti Andryani", "M. Ahsan", "Nia Ramadhani", "Olivia Jensen"
+    ],
+    "Kelas 9": [
+        "Ahmad Dhani", "Baim Wong", "Cinta Laura", "Deddy Corbuzier", "El Rumi",
+        "Fadil Jaidi", "Gading Marten", "Habib Jafar", "Isyana Sarasvati", "Jerome Polin",
+        "Kaesang Pangarep", "Livie Renata", "M. Atta Halilintar", "Najwa Shihab", "Onadio Leonardo"
+    ]
+}
+
+# ==========================================
+# 3. FUNGSI LOAD DATA
 # ==========================================
 @st.cache_data
 def load_materi_json():
@@ -71,50 +98,34 @@ def load_materi_json():
     except FileNotFoundError:
         return {}
 
-@st.cache_data
-def load_siswa_default():
+def get_data_siswa(kelas_nama):
+    """Mencoba membaca file CSV (misal: kelas 7a.csv atau kelas 8.csv). Jika tidak ditemukan, gunakan dummy."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, "kelas 7A.csv")
-    try:
-        df = pd.read_csv(file_path, sep=None, engine="python")
-        df.columns = [c.strip() for c in df.columns]
-        return df
-    except Exception:
-        return pd.DataFrame({
-            "No": range(1, 18),
-            "Nama": [
-                "Aditya Naufal Pratama", "Zidan Al Fatir", "Atika Zahara Ratifa",
-                "Ayu Azka Fariha", "Dini Khoirunisa", "Enjelita Laia",
-                "Ervan Martio Armana", "Farisman Lase", "Fauzia",
-                "Hendriyanto", "M Sahel Habibillah", "Okta Dita Pranata",
-                "Rahmad Ramadhani", "Yuda Agustian FitRoh", "Yulia Ramadhani",
-                "Marveltus Hia", "Muhammad Rhaehan A"
-            ],
-            "Jenis Kelamin": ["L", "L", "P", "P", "P", "P", "L", "P", "L", "L", "L", "L", "L", "L", "P", "L", "L"]
-        })
+    file_name = f"{kelas_nama.lower()}.csv"  # contoh: kelas 7a.csv atau kelas 8.csv
+    file_path = os.path.join(base_dir, file_name)
+    
+    if os.path.exists(file_path):
+        try:
+            df = pd.read_csv(file_path, sep=None, engine="python")
+            df.columns = [c.strip() for c in df.columns]
+            return df
+        except Exception:
+            pass
+
+    # Jika file CSV tidak ada, gunakan dataset dummy bawaan
+    list_nama = DUMMY_SISWA.get(kelas_nama, DUMMY_SISWA["Kelas 7A"])
+    jk_list = ["L" if i % 2 == 0 else "P" for i in range(len(list_nama))]
+    
+    return pd.DataFrame({
+        "No": range(1, len(list_nama) + 1),
+        "Nama": list_nama,
+        "Jenis Kelamin": jk_list
+    })
 
 DATABASE_MATERI = load_materi_json()
-DF_SISWA_7A = load_siswa_default()
 
 # ==========================================
-# 3. INISIALISASI SESSION STATE
-# ==========================================
-if "presensi_data" not in st.session_state:
-    df_p = DF_SISWA_7A.copy()
-    df_p["Status"] = "Hadir"
-    df_p["Keterangan"] = "-"
-    st.session_state.presensi_data = df_p
-
-if "nilai_data" not in st.session_state:
-    df_n = DF_SISWA_7A.copy()
-    df_n["Formatif (30%)"] = 80.0
-    df_n["Sumatif (30%)"] = 80.0
-    df_n["STS (20%)"] = 80.0
-    df_n["SAS (20%)"] = 80.0
-    st.session_state.nilai_data = df_n
-
-# ==========================================
-# 4. SIDEBAR PANEL (PROFIL GURU)
+# 4. SIDEBAR PANEL (PROFIL GURU & KELAS)
 # ==========================================
 with st.sidebar:
     st.markdown("### 👨‍🏫 Identitas Pengajar")
@@ -122,30 +133,58 @@ with st.sidebar:
     penyusun = st.text_input("Nama Guru / Penyusun", "Ridho Kurniawan, S.Pd.")
     
     st.divider()
-    st.markdown("### 🗓️ Setting Semester")
+    st.markdown("### 🏫 Pengaturan Kelas & Semester")
+    kelas_aktif = st.selectbox(
+        "Pilih Kelas Aktif",
+        ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"],
+        index=0
+    )
     tahun = st.text_input("Tahun Pelajaran", "2026/2027")
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
     
     st.divider()
     st.caption("✨ **Aplikasi Administrasi Guru**\nKurikulum Merdeka BSKAP 2025")
 
+# Load Data Siswa Sesuai Kelas Yang Dipilih
+DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
+
 # ==========================================
-# 5. HEADER BANNER
+# 5. INISIALISASI SESSION STATE PER KELAS
+# ==========================================
+key_p = f"presensi_{kelas_aktif}"
+key_n = f"nilai_{kelas_aktif}"
+
+if key_p not in st.session_state:
+    df_p = DF_SISWA_AKTIF.copy()
+    df_p["Status"] = "Hadir"
+    df_p["Keterangan"] = "-"
+    st.session_state[key_p] = df_p
+
+if key_n not in st.session_state:
+    df_n = DF_SISWA_AKTIF.copy()
+    df_n["Formatif (30%)"] = 80.0
+    df_n["Sumatif (30%)"] = 80.0
+    df_n["STS (20%)"] = 80.0
+    df_n["SAS (20%)"] = 80.0
+    st.session_state[key_n] = df_n
+
+# ==========================================
+# 6. HEADER BANNER
 # ==========================================
 st.markdown(f"""
     <div class="header-box">
         <h1>🎓 Portal Administrasi & Pembelajaran Guru</h1>
-        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} ({tahun} - Semester {semester})</p>
+        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} | <b>{kelas_aktif}</b> ({tahun} - Semester {semester})</p>
     </div>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. TAB NAVIGASI UTAMA
+# 7. TAB NAVIGASI UTAMA
 # ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📑 Generator Modul Ajar", 
-    "📋 Presensi Siswa", 
-    "📊 Buku Nilai & KKTP"
+    f"📋 Presensi ({kelas_aktif})", 
+    f"📊 Buku Nilai & KKTP ({kelas_aktif})"
 ])
 
 # ------------------------------------------
@@ -163,12 +202,12 @@ with tab1:
             if not DATABASE_MATERI:
                 st.warning("⚠️ File `materi.json` belum terdeteksi. Menggunakan mode manual.")
                 mapel_selected = st.selectbox("Mata Pelajaran", ["IPS", "PPKn"])
-                kelas_selected = st.selectbox("Kelas", ["Kelas 7", "Kelas 8", "Kelas 9"])
+                kelas_selected = st.selectbox("Jenjang Kelas Modul", ["Kelas 7", "Kelas 8", "Kelas 9"])
                 bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Kehidupan Sosial")
                 subbab_selected = st.text_input("Sub-Materi / Subbab", "Interaksi Sosial")
             else:
                 mapel_selected = st.selectbox("Mata Pelajaran", list(DATABASE_MATERI.keys()))
-                kelas_selected = st.selectbox("Kelas", list(DATABASE_MATERI[mapel_selected].keys()))
+                kelas_selected = st.selectbox("Jenjang Kelas Modul", list(DATABASE_MATERI[mapel_selected].keys()))
                 
                 bab_dict = DATABASE_MATERI[mapel_selected][kelas_selected]
                 bab_selected = st.selectbox("Bab / Tema Utama", list(bab_dict.keys()))
@@ -277,19 +316,31 @@ V. LAMPIRAN (LKPD DEEP LEARNING & RUBRIK)
     )
 
 # ------------------------------------------
-# TAB 2: PRESENSI SISWA
+# TAB 2: PRESENSI SISWA (INCLUDE TANGGAL)
 # ------------------------------------------
 with tab2:
-    col_p_title, col_p_date = st.columns([3, 1])
+    col_p_title, col_p_date = st.columns([2, 1])
     with col_p_title:
-        st.subheader("📋 Lembar Presensi Harian Siswa (Kelas 7A)")
+        st.subheader(f"📋 Lembar Presensi Harian Siswa ({kelas_aktif})")
     with col_p_date:
-        tgl_presensi = st.date_input("Tanggal Presensi", date.today())
+        tgl_presensi = st.date_input("Tanggal Pengajaran / Presensi", date.today(), key=f"date_{kelas_aktif}")
+
+    tgl_str = tgl_presensi.strftime("%Y-%m-%d")
+
+    # Ambil data presensi dari session state
+    df_presensi_current = st.session_state[key_p].copy()
+    df_presensi_current["Tanggal"] = tgl_str
+
+    cols_order = ["Tanggal", "No", "Nama", "Jenis Kelamin", "Status", "Keterangan"]
+    df_presensi_current = df_presensi_current[cols_order]
 
     with st.container(border=True):
+        st.caption(f"🗓️ Menampilkan presensi **{kelas_aktif}** untuk tanggal: **{tgl_presensi.strftime('%d %B %Y')}**")
+        
         edited_presensi = st.data_editor(
-            st.session_state.presensi_data,
+            df_presensi_current,
             column_config={
+                "Tanggal": st.column_config.TextColumn("Tanggal", disabled=True, width="medium"),
                 "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
                 "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
                 "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
@@ -301,11 +352,13 @@ with tab2:
                 ),
                 "Keterangan": st.column_config.TextColumn("Keterangan", width="large")
             },
-            disabled=["No", "Nama", "Jenis Kelamin"],
+            disabled=["Tanggal", "No", "Nama", "Jenis Kelamin"],
             hide_index=True,
-            use_container_width=True
+            use_container_width=True,
+            key=f"editor_p_{kelas_aktif}"
         )
-        st.session_state.presensi_data = edited_presensi
+        
+        st.session_state[key_p] = edited_presensi[["No", "Nama", "Jenis Kelamin", "Status", "Keterangan"]]
 
     # STATISTIK KARTU METRIK
     st.markdown("#### 📊 Statistik Kehadiran Hari Ini")
@@ -319,27 +372,28 @@ with tab2:
     st.divider()
     csv_presensi = edited_presensi.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Unduh Rekap Presensi (CSV)",
+        label=f"📥 Unduh Rekap Presensi {kelas_aktif} ({tgl_str})",
         data=csv_presensi,
-        file_name=f"Presensi_Kelas_7A_{tgl_presensi}.csv",
-        mime="text/csv"
+        file_name=f"Presensi_{kelas_aktif}_{tgl_str}.csv",
+        mime="text/csv",
+        type="primary"
     )
 
 # ------------------------------------------
 # TAB 3: BUKU NILAI & KKTP
 # ------------------------------------------
 with tab3:
-    st.subheader("📊 Buku Nilai Rapor & Kriteria Ketercapaian (KKTP)")
+    st.subheader(f"📊 Buku Nilai Rapor & KKTP ({kelas_aktif})")
     
     col_kktp, col_info = st.columns([1, 2])
     with col_kktp:
-        kktp_limit = st.number_input("Batas Minimal KKTP", min_value=50.0, max_value=100.0, value=75.0, step=1.0)
+        kktp_limit = st.number_input("Batas Minimal KKTP", min_value=50.0, max_value=100.0, value=75.0, step=1.0, key=f"kktp_{kelas_aktif}")
     with col_info:
         st.info("ℹ️ **Formulasi Bobot Nilai:** Formatif (30%) + Sumatif (30%) + STS (20%) + SAS (20%)")
 
     with st.container(border=True):
         edited_nilai = st.data_editor(
-            st.session_state.nilai_data,
+            st.session_state[key_n],
             column_config={
                 "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
                 "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
@@ -351,11 +405,12 @@ with tab3:
             },
             disabled=["No", "Nama", "Jenis Kelamin"],
             hide_index=True,
-            use_container_width=True
+            use_container_width=True,
+            key=f"editor_n_{kelas_aktif}"
         )
-        st.session_state.nilai_data = edited_nilai
+        st.session_state[key_n] = edited_nilai
 
-    # OLAHTA HASHIL LEGER
+    # LEGER RINGKASAN NILAI
     df_hasil = edited_nilai.copy()
     df_hasil["Nilai Akhir"] = (
         df_hasil["Formatif (30%)"] * 0.3 +
@@ -382,8 +437,8 @@ with tab3:
     st.divider()
     csv_nilai = df_hasil.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Unduh Leger Nilai (CSV)",
+        label=f"📥 Unduh Leger Nilai {kelas_aktif} (CSV)",
         data=csv_nilai,
-        file_name="Leger_Nilai_Kelas_7A.csv",
+        file_name=f"Leger_Nilai_{kelas_aktif}.csv",
         mime="text/csv"
     )
