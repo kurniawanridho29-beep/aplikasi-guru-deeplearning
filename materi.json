@@ -4,52 +4,134 @@
       "Bab 1: Kehidupan Sosial dan Kondisi Lingkungan Sekitar": [
         "Konektivitas Antarruang dan Waktu",
         "Interaksi Sosial dan Sosialisasi",
-        "Kegiatan Ekonomi (Produksi, Distribusi, Konsumsi)"
+        "Kebutuhan Manusia dan Kegiatan Ekonomi (Produksi, Distribusi, Konsumsi)"
       ],
       "Bab 2: Keberagaman Lingkungan Sekitar": [
         "Perubahan Potensi Sumber Daya Alam",
         "Aktivitas Kegiatan Ekonomi Masyarakat",
         "Peranan Masyarakat dalam Rantai Ekonomi"
+      ],
+      "Bab 3: Potensi Ekonomi Lingkungan": [
+        "Potensi Sumber Daya Alam Indonesia",
+        "Manfaat dan Kegiatan Ekonomi Khas Daerah",
+        "Status dan Peran Sosial Masyarakat"
+      ],
+      "Bab 4: Pemberdayaan Masyarakat": [
+        "Keragaman Sosial Budaya di Indonesia",
+        "Permasalahan Kehidupan Sosial Budaya",
+        "Pemberdayaan Ekonomi Masyarakat & Literasi Keuangan"
       ]
     },
     "Kelas 8": {
       "Bab 1: Kondisi Geografis dan Pelestarian Sumber Daya Alam": [
-        "Keragaman Alam Indonesia",
-        "Pemanfaatan Sumber Daya Alam",
-        "Kualitas Sumber Daya Manusia"
+        "Keragaman Alam Indonesia & Pemanfaatan SDA",
+        "Kualitas Sumber Daya Manusia (SDM) Indonesia",
+        "Peran Lembaga Sosial dalam Pemanfaatan SDA dan SDM"
+      ],
+      "Bab 2: Kemajemukan Masyarakat Indonesia": [
+        "Proses Keragaman Etnis, Budaya, dan Agama",
+        "Mobilitas Sosial dan Pluralitas",
+        "Integrasi Sosial dan Konflik Sosial"
+      ],
+      "Bab 3: Nasionalisme dan Jati Diri Bangsa": [
+        "Penjelajahan Samudra dan Perlawanan Bangsa Indonesia",
+        "Pergerakan Nasional Menuju Kemerdekaan",
+        "Perubahan Masyarakat Masa Pergerakan"
+      ],
+      "Bab 4: Pembangunan Perekonomian Indonesia": [
+        "Kondisi Perekonomian Indonesia",
+        "Perdagangan Internasional dan Ekonomi Digital",
+        "Peran Organisasi Internasional dalam Pembangunan"
       ]
     },
     "Kelas 9": {
-      "Bab 1: Perubahan Sosial dan Modernisasi": [
+      "Bab 1: Perubahan Sosial dan Globalisasi": [
         "Bentuk-Bentuk Perubahan Sosial",
-        "Dampak Perubahan Sosial dan Modernisasi",
-        "Globalisasi dan Perubahan Komunitas Lokal"
+        "Dampak Modernisasi & Globalisasi",
+        "Kearifan Lokal dalam Arus Globalisasi"
+      ],
+      "Bab 2: Keberagaman Masyarakat Indonesia dalam Bingkai Bhinneka Tunggal Ika": [
+        "Pembangunan Karakter Bangsa dan Harmoni Keberagaman",
+        "Potensi dan Masalah Keberagaman"
+      ],
+      "Bab 3: Komunikasi dan Perkembangan Ekonomi Digital": [
+        "Uang, Lembaga Keuangan, dan Transaksi Digital",
+        "Interaksi Masyarakat di Era Digital"
+      ],
+      "Bab 4: Kerjasama Dunia dan Peran Indonesia": [
+        "Kerjasama Internasional (Bilateral & Multilateral)",
+        "Peran Indonesia dalam Perdamaian Dunia"
       ]
     }
   },
   "PPKn": {
     "Kelas 7": {
       "Bab 1: Sejarah Kelahiran Pancasila": [
-        "Latar Belakang dan Pembentukan BPUPK",
+        "Latar Belakang Kelahiran Pancasila",
+        "Pembentukan BPUPK dan Usulan Dasar Negara",
         "Panitia Sembilan dan Piagam Jakarta",
         "Penetapan Pancasila sebagai Dasar Negara"
       ],
       "Bab 2: Penerapan Nilai-Nilai Pancasila": [
-        "Pancasila sebagai Pandangan Hidup Bangsa",
-        "Penerapan Nilai Pancasila dalam Sehari-Hari",
+        "Penerapan Nilai Sila 1 sampai 5",
         "Gotong Royong dalam Kehidupan Bermasyarakat"
+      ],
+      "Bab 3: Patuh terhadap Norma dan Aturan": [
+        "Hakikat Norma dan Aturan di Masyarakat",
+        "Hak dan Kewajiban Warga Negara"
+      ],
+      "Bab 4: Kebinekaan Indonesia": [
+        "Keberagaman Suku, Agama, Ras, dan Antargolongan (SARA)"
+      ],
+      "Bab 5: Wilayah NKRI dan Kewarganegaraan": [
+        "Batas Wilayah NKRI",
+        "Indonesia sebagai Negara Kesatuan"
       ]
     },
     "Kelas 8": {
       "Bab 1: Kedudukan dan Fungsi Pancasila": [
         "Pancasila sebagai Dasar Negara",
-        "Pancasila sebagai Cita-Cita dan Tujuan Bangsa"
+        "Pancasila sebagai Pandangan Hidup Bangsa",
+        "Pancasila sebagai Ideologi Negara"
+      ],
+      "Bab 2: Bentuk dan Kedaulatan Negara": [
+        "UUD NRI Tahun 1945",
+        "Sistem Pemerintahan Indonesia",
+        "Kedaulatan Rakyat"
+      ],
+      "Bab 3: Tata Urutan Peraturan Perundang-undangan": [
+        "Hierarki Hukum di Indonesia",
+        "Proses Pembuatan Peraturan Perundang-undangan"
+      ],
+      "Bab 4: Kebangkitan Nasional dan Sumpah Pemuda": [
+        "Sejarah Kebangkitan Nasional 1908 & Sumpah Pemuda 1928",
+        "Nilai-Nilai Kebangsaan dan Kejuangan"
+      ],
+      "Bab 5: Jati Diri Bangsa dan Budaya Nasional": [
+        "Pelestarian Budaya Nasional",
+        "Sikap Menghargai dan Membina Budaya Daerah"
       ]
     },
     "Kelas 9": {
-      "Bab 1: Dinamika Perwujudan Pancasila": [
-        "Penerapan Pancasila dari Masa ke Masa",
-        "Dinamika Nilai-Nilai Pancasila sesuai Perkembangan Zaman"
+      "Bab 1: Hubungan Antar Sila Pancasila": [
+        "Keterkaitan Antar Sila Pancasila",
+        "Implementasi Pancasila dalam Kehidupan Berbangsa"
+      ],
+      "Bab 2: Hak dan Kewajiban Warga Negara": [
+        "Penegakan Hak dan Kewajiban Warga Negara",
+        "Penanganan Pelanggaran Hak dan Pengingkaran Kewajiban"
+      ],
+      "Bab 3: Kedaulatan Rakyat dan Sistem Demokrasi": [
+        "Prinsip Demokrasi Pancasila",
+        "Peran dan Fungsi Lembaga-Lembaga Negara"
+      ],
+      "Bab 4: Keberagaman dan Harmoni Sosial": [
+        "Menjaga Komitmen Kebinekaan",
+        "Strategi Pemecahan Konflik Sosial"
+      ],
+      "Bab 5: Menjaga Keutuhan NKRI": [
+        "Ancaman terhadap Keutuhan NKRI",
+        "Bela Negara dan Rasa Cinta Tanah Air"
       ]
     }
   }
