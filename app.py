@@ -40,16 +40,6 @@ st.markdown("""
         margin: 5px 0 0 0;
         font-size: 0.95rem;
     }
-    .section-badge {
-        background-color: #eef2f6;
-        color: #1e3c72;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        display: inline-block;
-        margin-bottom: 10px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -164,9 +154,9 @@ with st.sidebar:
     
     st.divider()
     if client:
-        st.success("🟢 Otentikasi Google Sheets API Aktif (Auto Sync)!")
+        st.success("🟢 Otentikasi Google Sheets API Aktif!")
     else:
-        st.warning("⚠️ Google Sheets API Belum Terkonfigurasi di Secrets.")
+        st.warning("⚠️ Google Sheets API Belum Terkonfigurasi.")
 
 DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
 JUMLAH_KOLOM_NILAI = 15
@@ -312,40 +302,68 @@ with tab2:
             st.success("✅ Data Presensi Berhasil Disimpan Permanen ke Google Sheets!")
 
 # ------------------------------------------
-# TAB 3: BUKU NILAI & KKTP
+# TAB 3: BUKU NILAI & KKTP (Sesuai Permintaan)
 # ------------------------------------------
 with tab3:
     st.subheader(f"📊 Buku Nilai & Akumulasi Realtime ({kelas_aktif})")
     
+    # --- PENGATURAN KATEGORI PER KOLOM (DROPDOWN ATAS) ---
+    with st.expander("📌 Pengaturan Kategori/Jenis Penilaian per Kolom", expanded=True):
+        st.write("Silakan tentukan jenis penilaian untuk masing-masing kolom di bawah ini:")
+        cols_kat = st.columns(5)
+        kategori_terpilih = {}
+        for i in range(1, JUMLAH_KOLOM_NILAI + 1):
+            col_idx = (i - 1) % 5
+            with cols_kat[col_idx]:
+                kategori_terpilih[f"Nilai {i}"] = st.selectbox(
+                    f"Kolom Nilai {i}",
+                    options=KATEGORI_NILAI_OPSI,
+                    index=0 if i <= 10 else 1,
+                    key=f"kat_n_{kelas_aktif}_{i}"
+                )
+
+    # --- TABEL NILAI SISWA ---
     df_nilai_current = st.session_state[key_n].copy()
+    
     column_config_n = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
-        "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
+        "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="medium"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
+    
     kolom_nilai_keys = [f"Nilai {i}" for i in range(1, JUMLAH_KOLOM_NILAI + 1)]
     
+    # Set Label Kolom Sesuai Kategori yang Dipilih + Angka Kolom
     for k in kolom_nilai_keys:
+        label_kat = kategori_terpilih[k]
         column_config_n[k] = st.column_config.NumberColumn(
-            k, min_value=0.0, max_value=100.0, format="%.1f", width="medium"
+            f"{k} ({label_kat})",
+            min_value=0.0,
+            max_value=100.0,
+            format="%.1f",
+            width="medium"
         )
     
+    # Hitung Akumulasi Rata-rata Nilai Realtime
     df_numeric = df_nilai_current[kolom_nilai_keys].apply(pd.to_numeric, errors='coerce')
-    df_nilai_current["Nilai Akhir (Akumulasi)"] = df_numeric.mean(axis=1).round(2)
-    column_config_n["Nilai Akhir (Akumulasi)"] = st.column_config.NumberColumn(
+    df_nilai_current["📊 Nilai Akhir"] = df_numeric.mean(axis=1).round(2)
+    
+    column_config_n["📊 Nilai Akhir"] = st.column_config.NumberColumn(
         "📊 Nilai Akhir", disabled=True, format="%.2f", width="medium"
     )
 
     edited_n = st.data_editor(
         df_nilai_current,
         column_config=column_config_n,
-        disabled=["No", "Nama", "Jenis Kelamin", "Nilai Akhir (Akumulasi)"],
+        disabled=["No", "Nama", "Jenis Kelamin", "📊 Nilai Akhir"],
         hide_index=True,
         use_container_width=True,
         key=f"editor_n_{kelas_aktif}"
     )
+    
     st.session_state[key_n] = edited_n[DF_SISWA_AKTIF.columns.tolist() + kolom_nilai_keys]
 
-    if st.button(f"💾 Simpan Nilai {kelas_aktif} ke Google Sheets", type="primary"):
+    st.markdown("---")
+    if st.button(f"💾 Simpan Buku Nilai {kelas_aktif} ke Google Sheets", type="primary"):
         if save_data_to_sheet(f"Nilai_{kelas_aktif}", edited_n):
-            st.success("✅ Data Nilai Berhasil Disimpan Permanen ke Google Sheets!")
+            st.success("✅ Data Buku Nilai Berhasil Disimpan Permanen ke Google Sheets!")
