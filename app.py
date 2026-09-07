@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import io
+from docx import Document
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.ns import nsdecls, qn
 
 # Konfigurasi Halaman Utama
 st.set_page_config(
@@ -199,11 +204,129 @@ DATABASE_MATERI = {
     }
 }
 
-# Helper Function Export Excel
+# Helper Function Export Excel (Untuk Presensi & Nilai)
 def to_excel(df, sheet_name="Data_Administrasi"):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name=sheet_name)
+    return output.getvalue()
+
+# Helper Function Export Word (Untuk Modul Ajar)
+def to_word(text_content):
+    doc = Document()
+    
+    # Mengatur Margin Dokumen (Standar 2.54 cm / 1 Inci)
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
+        
+    lines = text_content.split('\n')
+    
+    in_table = False
+    table_data = []
+
+    for line in lines:
+        stripped = line.strip()
+        
+        # Penanganan Tabel
+        if stripped.startswith('|') and stripped.endswith('|'):
+            in_table = True
+            # Abaikan garis pemisah tabel markdown | :--- | :--- |
+            if "---" in stripped:
+                continue
+            cols = [col.strip() for col in stripped.split('|')[1:-1]]
+            table_data.append(cols)
+            continue
+        elif in_table and not (stripped.startswith('|') and stripped.endswith('|')):
+            # Buat tabel Word dari data yang terkumpul
+            if table_data:
+                num_rows = len(table_data)
+                num_cols = max(len(row) for row in table_data)
+                table = doc.add_table(rows=num_rows, cols=num_cols)
+                table.style = 'Table Grid'
+                
+                for r_idx, row in enumerate(table_data):
+                    for c_idx, val in enumerate(row):
+                        if c_idx < num_cols:
+                            cell = table.cell(r_idx, c_idx)
+                            cell.text = val
+                            # Bold untuk Header Tabel
+                            if r_idx == 0:
+                                for paragraph in cell.paragraphs:
+                                    for run in paragraph.runs:
+                                        run.font.bold = True
+                
+                doc.add_paragraph() # Spasi setelah tabel
+                table_data = []
+                in_table = False
+
+        if not stripped:
+            continue
+
+        # Parsing Header Markdown
+        if stripped.startswith('# '):
+            p = doc.add_paragraph()
+            run = p.add_run(stripped[2:])
+            run.font.size = Pt(16)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0, 51, 102)
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        elif stripped.startswith('## '):
+            p = doc.add_paragraph()
+            run = p.add_run(stripped[3:])
+            run.font.size = Pt(13)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0, 51, 102)
+        elif stripped.startswith('### '):
+            p = doc.add_paragraph()
+            run = p.add_run(stripped[4:])
+            run.font.size = Pt(11)
+            run.font.bold = True
+        elif stripped.startswith('#### '):
+            p = doc.add_paragraph()
+            run = p.add_run(stripped[5:])
+            run.font.size = Pt(10.5)
+            run.font.bold = True
+        elif stripped.startswith('* ') or stripped.startswith('- '):
+            p = doc.add_paragraph(style='List Bullet')
+            # Parsing bold sederhana
+            parts = stripped[2:].split('**')
+            for idx, part in enumerate(parts):
+                run = p.add_run(part)
+                if idx % 2 == 1:
+                    run.font.bold = True
+        elif stripped.startswith('---'):
+            p = doc.add_paragraph()
+            p.add_run('_________________________________________________________________________________').font.color.rgb = RGBColor(200, 200, 200)
+        else:
+            p = doc.add_paragraph()
+            parts = stripped.split('**')
+            for idx, part in enumerate(parts):
+                run = p.add_run(part)
+                if idx % 2 == 1:
+                    run.font.bold = True
+
+    # Jika tabel berada di paling akhir dokumen
+    if in_table and table_data:
+        num_rows = len(table_data)
+        num_cols = max(len(row) for row in table_data)
+        table = doc.add_table(rows=num_rows, cols=num_cols)
+        table.style = 'Table Grid'
+        for r_idx, row in enumerate(table_data):
+            for c_idx, val in enumerate(row):
+                if c_idx < num_cols:
+                    cell = table.cell(r_idx, c_idx)
+                    cell.text = val
+                    if r_idx == 0:
+                        for paragraph in cell.paragraphs:
+                            for run in paragraph.runs:
+                                run.font.bold = True
+
+    output = io.BytesIO()
+    doc.save(output)
     return output.getvalue()
 
 # Helper Kalkulasi Nilai
@@ -322,7 +445,7 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 
 ## III. KEGIATAN PEMBELAJARAN DETAIL (DEEP LEARNING SYNTAX)
 
-### 🔴 PERTEMUAN 1 ({alokasi_jp//2} JP) - EKSPLORASI KONSEP & MINDFUL LEARNING
+### PERTEMUAN 1 ({alokasi_jp//2} JP) - EKSPLORASI KONSEP & MINDFUL LEARNING
 
 #### 1. Pendahuluan (15 Menit) - *Mindful Start*
 * **Salam & Doa:** Guru membuka pembelajaran dengan salam dan berdoa bersama untuk membangun suasana religius.
@@ -342,7 +465,7 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 
 ---
 
-### 🔴 PERTEMUAN 2 ({alokasi_jp//2} JP) - APLIKASI, UNJUK KARYA & REFLEKSI
+### PERTEMUAN 2 ({alokasi_jp//2} JP) - APLIKASI, UNJUK KARYA & REFLEKSI
 
 #### 1. Pendahuluan (15 Menit)
 * Guru mereview kembali pemahaman dari Pertemuan 1 terkait {str_sub_materi}.
@@ -404,23 +527,15 @@ NIP.
         
         st.markdown(modul_text)
         
-        # Download Excel
-        df_modul = pd.DataFrame([{
-            "Nama Sekolah": nama_sekolah,
-            "Penyusun": nama_guru,
-            "Mata Pelajaran": mapel,
-            "Kelas/Fase": fase_kelas,
-            "Bab / Topik": bab_materi,
-            "Sub-Materi": str_sub_materi,
-            "Alokasi JP": alokasi_jp,
-            "Isi Lengkap Modul Ajar Deep Learning": modul_text
-        }])
+        # Download Dokumen Word (.docx)
+        word_data = to_word(modul_text)
+        nama_file_clean = mapel.replace(" ", "_").replace("(", "").replace(")", "")
         
         st.download_button(
-            label="📥 Download Modul Ajar Lengkap (Excel)",
-            data=to_excel(df_modul, "Modul_Ajar_Lengkap"),
-            file_name=f"Modul_Ajar_Lengkap_{mapel}_{tingkat_kelas[:8]}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            label="📄 Download Modul Ajar Lengkap (Word / .docx)",
+            data=word_data,
+            file_name=f"Modul_Ajar_{nama_file_clean}_{tingkat_kelas[:8].replace(' ', '_')}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
 # ==========================================
