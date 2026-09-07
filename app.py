@@ -6,7 +6,7 @@ from docx import Document
 from io import BytesIO
 
 # ==========================================
-# 1. KONFIGURASI HALAMAN & CUSTOM STYLING (CSS)
+# 1. KONFIGURASI HALAMAN & CUSTOM STYLING
 # ==========================================
 st.set_page_config(
     page_title="Sistem Terpadu Pembelajaran & Administrasi Guru",
@@ -52,7 +52,31 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATASET SISWA DUMMY (FALLBACK)
+# 2. FILE PENYIMPANAN PERMANEN (AUTO-SAVE)
+# ==========================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "database_administrasi.json")
+
+def load_db_permanen():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_db_permanen(db_data):
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(db_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"Gagal menyimpan data: {e}")
+
+DB_STORAGE = load_db_permanen()
+
+# ==========================================
+# 3. DATASET SISWA DUMMY (FALLBACK)
 # ==========================================
 DUMMY_SISWA = {
     "Kelas 7A": [
@@ -63,28 +87,22 @@ DUMMY_SISWA = {
     ],
     "Kelas 7B": [
         "Ahmad Albar", "Bagas Saputra", "Citra Kirana", "Dedi Kurniawan", "Eka Putri",
-        "Fahri Hamzah", "Gita Gutawa", "Hafiz Ridho", "Indah Permata", "Joko Susilo",
-        "Kurnia Dewi", "Lutfi Hakim", "M. Rizky Pratama", "Nabila Syakieb", "Oki Setiana"
+        "Fahri Hamzah", "Gita Gutawa", "Hafiz Ridho", "Indah Permata", "Joko Susilo"
     ],
     "Kelas 8": [
-        "Andi Wijaya", "Budi Santoso", "Cici Paramida", "Doni Monardo", "Eva Celia",
-        "Fajar Sadboy", "Grace Natalie", "Hendra Setiawan", "Irfan Bachdim", "Joni Suprianto",
-        "Kiki Amalia", "Lesti Andryani", "M. Ahsan", "Nia Ramadhani", "Olivia Jensen"
+        "Andi Wijaya", "Budi Santoso", "Cici Paramida", "Doni Monardo", "Eva Celia"
     ],
     "Kelas 9": [
-        "Ahmad Dhani", "Baim Wong", "Cinta Laura", "Deddy Corbuzier", "El Rumi",
-        "Fadil Jaidi", "Gading Marten", "Habib Jafar", "Isyana Sarasvati", "Jerome Polin",
-        "Kaesang Pangarep", "Livie Renata", "M. Atta Halilintar", "Najwa Shihab", "Onadio Leonardo"
+        "Abelia", "Alfinus", "Arifki", "Felicita", "Hendra"
     ]
 }
 
 # ==========================================
-# 3. FUNGSI LOAD DATA
+# 4. FUNGSI LOAD DATA SISWA & MATERI
 # ==========================================
 @st.cache_data
 def load_materi_json():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, "materi.json")
+    file_path = os.path.join(BASE_DIR, "materi.json")
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -92,18 +110,51 @@ def load_materi_json():
         return {}
 
 def get_data_siswa(kelas_nama):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_name = f"{kelas_nama.lower()}.csv"
-    file_path = os.path.join(base_dir, file_name)
+    """Fungsi fleksibel membaca CSV (baik pemisah Tab maupun Koma)"""
+    nama_clean = kelas_nama.lower().replace(" ", "")
     
-    if os.path.exists(file_path):
+    # Cari nama file yang cocok (misal: kelas9.csv, kelas 9.csv, KELAS 9.csv)
+    possible_files = [
+        f"{nama_clean}.csv",
+        f"{kelas_nama.lower()}.csv",
+        f"{kelas_nama.upper()}.csv"
+    ]
+    
+    file_path = None
+    for fname in possible_files:
+        p = os.path.join(BASE_DIR, fname)
+        if os.path.exists(p):
+            file_path = p
+            break
+
+    if file_path:
         try:
+            # Mencoba membaca dengan sep=None & engine='python' agar otomatis deteksi separator
             df = pd.read_csv(file_path, sep=None, engine="python")
-            df.columns = [c.strip() for c in df.columns]
-            return df
+            df.columns = [str(c).strip() for c in df.columns]
+            
+            # Normalisasi nama kolom agar seragam
+            col_map = {}
+            for col in df.columns:
+                if 'nama' in col.lower():
+                    col_map[col] = 'Nama'
+                elif 'no' in col.lower():
+                    col_map[col] = 'No'
+                elif 'jenis' in col.lower() or 'jk' in col.lower():
+                    col_map[col] = 'Jenis Kelamin'
+            
+            df = df.rename(columns=col_map)
+            
+            if "Nama" in df.columns:
+                if "No" not in df.columns:
+                    df.insert(0, "No", range(1, len(df) + 1))
+                if "Jenis Kelamin" not in df.columns:
+                    df["Jenis Kelamin"] = "-"
+                return df[["No", "Nama", "Jenis Kelamin"]]
         except Exception:
             pass
 
+    # Jika file tidak ketemu / gagal dibaca, pakai data fallback
     list_nama = DUMMY_SISWA.get(kelas_nama, DUMMY_SISWA["Kelas 7A"])
     jk_list = ["L" if i % 2 == 0 else "P" for i in range(len(list_nama))]
     
@@ -116,7 +167,7 @@ def get_data_siswa(kelas_nama):
 DATABASE_MATERI = load_materi_json()
 
 # ==========================================
-# 4. SIDEBAR PANEL (PROFIL GURU & KELAS)
+# 5. SIDEBAR PANEL
 # ==========================================
 with st.sidebar:
     st.markdown("### 👨‍🏫 Identitas Pengajar")
@@ -128,7 +179,7 @@ with st.sidebar:
     kelas_aktif = st.selectbox(
         "Pilih Kelas Aktif",
         ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"],
-        index=0
+        index=3 # Default Kelas 9
     )
     tahun = st.text_input("Tahun Pelajaran", "2026/2027")
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
@@ -137,35 +188,44 @@ with st.sidebar:
     st.caption("✨ **Aplikasi Administrasi Guru**\nKurikulum Merdeka BSKAP 2025")
 
 DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
-
-# ==========================================
-# 5. INISIALISASI SESSION STATE (KOSONG AWAL)
-# ==========================================
-key_p = f"presensi_blank_{kelas_aktif}"
-key_n = f"nilai_blank_{kelas_aktif}"
-key_kat = f"kategori_cols_{kelas_aktif}"
-
-# Presensi Blank
-if key_p not in st.session_state:
-    df_p = DF_SISWA_AKTIF.copy()
-    for t in range(1, 32):
-        df_p[str(t)] = ""  # Dikosongkan
-    st.session_state[key_p] = df_p
-
-# Nilai Blank (Sediakan 10 Kolom Nilai)
 JUMLAH_KOLOM_NILAI = 10
-if key_n not in st.session_state:
-    df_n = DF_SISWA_AKTIF.copy()
-    for i in range(1, JUMLAH_KOLOM_NILAI + 1):
-        df_n[f"N{i}"] = None  # Kosong (None)
-    st.session_state[key_n] = df_n
-
-# Kategori per Kolom Nilai
-if key_kat not in st.session_state:
-    st.session_state[key_kat] = {f"N{i}": "Tugas Individu" for i in range(1, JUMLAH_KOLOM_NILAI + 1)}
 
 # ==========================================
-# 6. HEADER BANNER
+# 6. INISIALISASI & PERSISTENSI SESSION STATE
+# ==========================================
+key_p = f"presensi_{kelas_aktif}"
+key_n = f"nilai_{kelas_aktif}"
+key_kat = f"kategori_{kelas_aktif}"
+
+# --- Init Presensi ---
+if key_p not in st.session_state:
+    if key_p in DB_STORAGE:
+        st.session_state[key_p] = pd.DataFrame(DB_STORAGE[key_p])
+    else:
+        df_p = DF_SISWA_AKTIF.copy()
+        for t in range(1, 32):
+            df_p[str(t)] = ""
+        st.session_state[key_p] = df_p
+
+# --- Init Nilai ---
+if key_n not in st.session_state:
+    if key_n in DB_STORAGE:
+        st.session_state[key_n] = pd.DataFrame(DB_STORAGE[key_n])
+    else:
+        df_n = DF_SISWA_AKTIF.copy()
+        for i in range(1, JUMLAH_KOLOM_NILAI + 1):
+            df_n[f"N{i}"] = None
+        st.session_state[key_n] = df_n
+
+# --- Init Kategori Nilai ---
+if key_kat not in st.session_state:
+    if key_kat in DB_STORAGE:
+        st.session_state[key_kat] = DB_STORAGE[key_kat]
+    else:
+        st.session_state[key_kat] = {f"N{i}": "Tugas Individu" for i in range(1, JUMLAH_KOLOM_NILAI + 1)}
+
+# ==========================================
+# 7. HEADER BANNER
 # ==========================================
 st.markdown(f"""
     <div class="header-box">
@@ -175,7 +235,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 7. TAB NAVIGASI UTAMA
+# 8. TAB NAVIGASI UTAMA
 # ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📑 Generator Modul Ajar", 
@@ -191,7 +251,6 @@ with tab1:
     st.subheader("Konfigurasi Modul Ajar")
     
     col_a, col_b = st.columns(2)
-    
     with col_a:
         with st.container(border=True):
             st.markdown("#### 📚 Pemilihan Kurikulum & Materi")
@@ -286,9 +345,6 @@ V. LAMPIRAN (LKPD DEEP LEARNING & RUBRIK)
  ( .................................... )                  ({penyusun})
 """
 
-    with st.expander("📄 Klik untuk Pratinjau Teks Dokumen", expanded=False):
-        st.text_area("Isi Teks", modul_text, height=250)
-
     def export_word(text):
         doc = Document()
         for p in text.split('\n'):
@@ -312,7 +368,7 @@ V. LAMPIRAN (LKPD DEEP LEARNING & RUBRIK)
     )
 
 # ------------------------------------------
-# TAB 2: BUKU PRESENSI (KOSONG / KOSONGKAN)
+# TAB 2: BUKU PRESENSI
 # ------------------------------------------
 with tab2:
     st.subheader(f"📖 Buku Presensi Harian ({kelas_aktif})")
@@ -326,7 +382,7 @@ with tab2:
             key=f"bln_{kelas_aktif}"
         )
     with col_p2:
-        st.info("💡 **Petunjuk:** Tabel presensi disajikan kosong. Silakan isi kode: **H** (Hadir), **S** (Sakit), **I** (Izin), atau **A** (Alpha).")
+        st.info("💡 **Petunjuk:** Isi kode **H** (Hadir), **S** (Sakit), **I** (Izin), atau **A** (Alpha). Data tersimpan otomatis.")
 
     df_p_edit = st.session_state[key_p].copy()
 
@@ -346,11 +402,13 @@ with tab2:
             disabled=["No", "Nama", "Jenis Kelamin"],
             hide_index=True,
             use_container_width=True,
-            key=f"editor_p_blank_{kelas_aktif}"
+            key=f"editor_p_{kelas_aktif}"
         )
+        
         st.session_state[key_p] = edited_p_matrix
+        DB_STORAGE[key_p] = edited_p_matrix.to_dict(orient="records")
+        save_db_permanen(DB_STORAGE)
 
-    # HITUNG REKAP PRESENSI (OTOMATIS DARI ISI MANUAL)
     tgl_cols = [str(t) for t in range(1, 32)]
     df_rekap_p = edited_p_matrix[["No", "Nama", "Jenis Kelamin"]].copy()
     df_rekap_p["Hadir (H)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.astype(str).str.upper() == "H").sum(), axis=1)
@@ -361,7 +419,6 @@ with tab2:
     st.markdown(f"#### 📊 Rekapitulasi Presensi Bulan {bulan_presensi}")
     st.dataframe(df_rekap_p, use_container_width=True, hide_index=True)
 
-    st.divider()
     csv_presensi = edited_p_matrix.to_csv(index=False).encode('utf-8')
     st.download_button(
         label=f"📥 Unduh Buku Presensi Bulan {bulan_presensi} ({kelas_aktif})",
@@ -372,11 +429,11 @@ with tab2:
     )
 
 # ------------------------------------------
-# TAB 3: BUKU NILAI (TABEL TUNGGAL + KATEGORI HEADER DROPDOWN)
+# TAB 3: BUKU NILAI
 # ------------------------------------------
 with tab3:
     st.subheader(f"📊 Buku Nilai Siswa ({kelas_aktif})")
-    st.caption("💡 Atur jenis penilaian pada setiap kolom di bawah ini, lalu isikan nilainya. Akumulasi nilai akhir akan terhitung otomatis.")
+    st.caption("💡 Atur jenis penilaian untuk tiap kolom, lalu isikan nilainya. Data tersimpan secara otomatis.")
 
     OPSI_KATEGORI = [
         "Tugas Individu",
@@ -386,27 +443,27 @@ with tab3:
         "UAS / Akhir Semester"
     ]
 
-    # PENGATURAN DROPDOWN KATEGORI HEADER UNTUK KOLOM NILAI
     with st.expander("⚙️ **Atur Jenis Penilaian untuk Setiap Kolom (Nilai 1 s.d Nilai 10)**", expanded=True):
         cols_kat = st.columns(5)
         for idx in range(1, JUMLAH_KOLOM_NILAI + 1):
             col_target = cols_kat[(idx - 1) % 5]
             with col_target:
-                st.session_state[key_kat][f"N{idx}"] = st.selectbox(
+                selected_val = st.selectbox(
                     f"Jenis Nilai #{idx}",
                     OPSI_KATEGORI,
-                    index=0 if idx <= 5 else 1,
+                    index=OPSI_KATEGORI.index(st.session_state[key_kat].get(f"N{idx}", "Tugas Individu")),
                     key=f"sel_kat_N{idx}_{kelas_aktif}"
                 )
+                st.session_state[key_kat][f"N{idx}"] = selected_val
+        
+        DB_STORAGE[key_kat] = st.session_state[key_kat]
+        save_db_permanen(DB_STORAGE)
 
-    # PERSIAPAN TABEL TUNGGAL BUKU NILAI
     df_n_current = st.session_state[key_n].copy()
     
-    # Hitung Akumulasi Realtime (Rata-Rata Nilai yang Diisi)
     col_nilai_list = [f"N{i}" for i in range(1, JUMLAH_KOLOM_NILAI + 1)]
-    df_n_current["Nilai Akhir (Akumulasi)"] = df_n_current[col_nilai_list].mean(axis=1, skipna=True).round(2)
+    df_n_current["Nilai Akhir (Akumulasi)"] = df_n_current[col_nilai_list].apply(pd.to_numeric, errors='coerce').mean(axis=1, skipna=True).round(2)
 
-    # Buat Config Header Dinamis (Nama Kolom + Jenis Penilaiannya)
     column_config_n = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
@@ -439,12 +496,14 @@ with tab3:
             disabled=["No", "Nama", "Jenis Kelamin", "Nilai Akhir (Akumulasi)"],
             hide_index=True,
             use_container_width=True,
-            key=f"editor_buku_nilai_tunggal_{kelas_aktif}"
+            key=f"editor_buku_nilai_{kelas_aktif}"
         )
         
-        # Simpan Kembali Inputan Guru ke Session State
         for col in col_nilai_list:
             st.session_state[key_n][col] = edited_buku_nilai[col]
+            
+        DB_STORAGE[key_n] = edited_buku_nilai.to_dict(orient="records")
+        save_db_permanen(DB_STORAGE)
 
     st.divider()
     csv_buku_nilai = edited_buku_nilai.to_csv(index=False).encode('utf-8')
