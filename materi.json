@@ -1,0 +1,56 @@
+{
+  "IPS": {
+    "Kelas 7": {
+      "Bab 1: Kehidupan Sosial dan Kondisi Lingkungan Sekitar": [
+        "Konektivitas Antarruang dan Waktu",
+        "Interaksi Sosial dan Sosialisasi",
+        "Kegiatan Ekonomi (Produksi, Distribusi, Konsumsi)"
+      ],
+      "Bab 2: Keberagaman Lingkungan Sekitar": [
+        "Perubahan Potensi Sumber Daya Alam",
+        "Aktivitas Kegiatan Ekonomi Masyarakat",
+        "Peranan Masyarakat dalam Rantai Ekonomi"
+      ]
+    },
+    "Kelas 8": {
+      "Bab 1: Kondisi Geografis dan Pelestarian Sumber Daya Alam": [
+        "Keragaman Alam Indonesia",
+        "Pemanfaatan Sumber Daya Alam",
+        "Kualitas Sumber Daya Manusia"
+      ]
+    },
+    "Kelas 9": {
+      "Bab 1: Perubahan Sosial dan Modernisasi": [
+        "Bentuk-Bentuk Perubahan Sosial",
+        "Dampak Perubahan Sosial dan Modernisasi",
+        "Globalisasi dan Perubahan Komunitas Lokal"
+      ]
+    }
+  },
+  "PPKn": {
+    "Kelas 7": {
+      "Bab 1: Sejarah Kelahiran Pancasila": [
+        "Latar Belakang dan Pembentukan BPUPK",
+        "Panitia Sembilan dan Piagam Jakarta",
+        "Penetapan Pancasila sebagai Dasar Negara"
+      ],
+      "Bab 2: Penerapan Nilai-Nilai Pancasila": [
+        "Pancasila sebagai Pandangan Hidup Bangsa",
+        "Penerapan Nilai Pancasila dalam Sehari-Hari",
+        "Gotong Royong dalam Kehidupan Bermasyarakat"
+      ]
+    },
+    "Kelas 8": {
+      "Bab 1: Kedudukan dan Fungsi Pancasila": [
+        "Pancasila sebagai Dasar Negara",
+        "Pancasila sebagai Cita-Cita dan Tujuan Bangsa"
+      ]
+    },
+    "Kelas 9": {
+      "Bab 1: Dinamika Perwujudan Pancasila": [
+        "Penerapan Pancasila dari Masa ke Masa",
+        "Dinamika Nilai-Nilai Pancasila sesuai Perkembangan Zaman"
+      ]
+    }
+  }
+}
