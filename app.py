@@ -1,25 +1,30 @@
 import streamlit as st
 import pandas as pd
 import json
+import os
 from docx import Document
 from io import BytesIO
 from datetime import date
 
 st.set_page_config(page_title="Sistem Terpadu Pembelajaran & Administrasi Guru", layout="wide")
 
-# --- 1. FUNGSI LOAD DATA ---
+# --- 1. FUNGSI LOAD DATA (DENGAN PATH OTOMATIS) ---
 @st.cache_data
 def load_materi_json():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "materi.json")
     try:
-        with open("materi.json", "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
 @st.cache_data
 def load_siswa_default():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "kelas 7A.csv")
     try:
-        df = pd.read_csv("kelas 7A.csv", sep=None, engine="python")
+        df = pd.read_csv(file_path, sep=None, engine="python")
         df.columns = [c.strip() for c in df.columns]
         return df
     except Exception:
@@ -196,7 +201,6 @@ elif menu == "📋 Presensi Siswa (Kelas 7A)":
     tgl_presensi = st.date_input("Tanggal Presensi", date.today())
     st.info(f"Total Siswa Terdaftar: **{len(st.session_state.presensi_data)} Siswa**")
 
-    # Editor Tabel Presensi
     edited_presensi = st.data_editor(
         st.session_state.presensi_data,
         column_config={
@@ -217,7 +221,6 @@ elif menu == "📋 Presensi Siswa (Kelas 7A)":
     
     st.session_state.presensi_data = edited_presensi
 
-    # Ringkasan Rekap
     st.subheader("📊 Ringkasan Kehadiran Hari Ini")
     rekap = edited_presensi["Status"].value_counts()
     col_r1, col_r2, col_r3, col_r4 = st.columns(4)
@@ -226,7 +229,6 @@ elif menu == "📋 Presensi Siswa (Kelas 7A)":
     col_r3.metric("Izin", rekap.get("Izin", 0))
     col_r4.metric("Alpha", rekap.get("Alpha", 0))
 
-    # Ekspor CSV
     csv_presensi = edited_presensi.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Unduh Rekap Presensi (CSV)",
@@ -262,7 +264,6 @@ elif menu == "📊 Buku Nilai & KKTP (Kelas 7A)":
     
     st.session_state.nilai_data = edited_nilai
 
-    # Hitung Nilai Akhir
     df_hasil = edited_nilai.copy()
     df_hasil["Nilai Akhir"] = (
         df_hasil["Formatif (30%)"] * 0.3 +
@@ -278,7 +279,6 @@ elif menu == "📊 Buku Nilai & KKTP (Kelas 7A)":
     st.subheader("📋 Hasil Perhitungan Nilai Rapor Kelas 7A")
     st.dataframe(df_hasil[["No", "Nama", "Jenis Kelamin", "Nilai Akhir", "Status KKTP"]], use_container_width=True, hide_index=True)
 
-    # Ekspor Laporan Nilai
     csv_nilai = df_hasil.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Unduh Leger Nilai (CSV)",
