@@ -4,10 +4,10 @@ import io
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement, parse_xml
-from docx.oxml.ns import nsdecls, qn
 
-# Konfigurasi Halaman Utama
+# -----------------------------------------------------------------------------
+# KONFIGURASI HALAMAN UTAMA
+# -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Aplikasi Administrasi Guru Digital - IPS & PPKn",
     page_icon="📚",
@@ -33,16 +33,37 @@ st.markdown("""
 st.markdown('<div class="main-header">PORTAL ADMINISTRASI GURU DIGITAL (IPS & PPKn SMP)</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Generator Modul Ajar Deep Learning Lengkap (BSKAP 046/2025), Presensi Dropdown & Buku Nilai KKTP</div>', unsafe_allow_html=True)
 
-# Sidebar Navigasi
+# -----------------------------------------------------------------------------
+# DATA REFERENSI JAM SEKOLAH (JADWAL REAL)
+# -----------------------------------------------------------------------------
+DATA_JAM_SEKOLAH = {
+    "Jam 1": {"waktu": "08:10 - 08:50", "durasi": 40},
+    "Jam 2": {"waktu": "08:50 - 09:30", "durasi": 40},
+    # 09:30 - 09:45 Istirahat 1
+    "Jam 3": {"waktu": "09:45 - 10:25", "durasi": 40},
+    "Jam 4": {"waktu": "10:25 - 11:05", "durasi": 40},
+    # 11:05 - 11:20 Istirahat 2
+    "Jam 5": {"waktu": "11:20 - 12:10", "durasi": 50},  # Durasi sebelum Zuhur
+    # 12:10 - 12:30 Shalat Zuhur
+    "Jam 6": {"waktu": "12:30 - 13:10", "durasi": 40},
+    "Jam 7": {"waktu": "13:10 - 13:30", "durasi": 20},  # Jam terakhir Senin
+    "Jam 8": {"waktu": "13:10 - 13:30", "durasi": 20},  # Jam terakhir Selasa
+}
+
+# -----------------------------------------------------------------------------
+# NAVIGASI SIDEBAR
+# -----------------------------------------------------------------------------
 st.sidebar.title("📌 Navigasi Fitur")
 menu = st.sidebar.radio(
     "Pilih Modul Aplikasi:",
-    ["1. Generator Modul Ajar (Deep Learning)", "2. Presensi Dropdown Lintas Kelas", "3. Buku Nilai & Status KKTP (Satu Tabel)"]
+    ["1. Generator Modul Ajar (Deep Learning)", "2. Info Jadwal Jam Sekolah", "3. Presensi Dropdown Lintas Kelas", "4. Buku Nilai & Status KKTP (Satu Tabel)"]
 )
 
 daftar_kelas = ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"]
 
-# Database Bab & Sub-Materi Lengkap IPS & PPKn (Berdasarkan Struktur Drive & BSKAP 2025)
+# -----------------------------------------------------------------------------
+# DATABASE BAB & SUB-MATERI LENGKAP IPS & PPKN
+# -----------------------------------------------------------------------------
 DATABASE_MATERI = {
     "Ilmu Pengetahuan Sosial (IPS)": {
         "Kelas VII / Fase D": {
@@ -204,18 +225,17 @@ DATABASE_MATERI = {
     }
 }
 
-# Helper Function Export Excel (Untuk Presensi & Nilai)
+# -----------------------------------------------------------------------------
+# HELPER FUNCTIONS
+# -----------------------------------------------------------------------------
 def to_excel(df, sheet_name="Data_Administrasi"):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name=sheet_name)
     return output.getvalue()
 
-# Helper Function Export Word (Untuk Modul Ajar)
 def to_word(text_content):
     doc = Document()
-    
-    # Mengatur Margin Dokumen (Standar 2.54 cm / 1 Inci)
     sections = doc.sections
     for section in sections:
         section.top_margin = Inches(1)
@@ -224,24 +244,20 @@ def to_word(text_content):
         section.right_margin = Inches(1)
         
     lines = text_content.split('\n')
-    
     in_table = False
     table_data = []
 
     for line in lines:
         stripped = line.strip()
         
-        # Penanganan Tabel
         if stripped.startswith('|') and stripped.endswith('|'):
             in_table = True
-            # Abaikan garis pemisah tabel markdown | :--- | :--- |
             if "---" in stripped:
                 continue
             cols = [col.strip() for col in stripped.split('|')[1:-1]]
             table_data.append(cols)
             continue
         elif in_table and not (stripped.startswith('|') and stripped.endswith('|')):
-            # Buat tabel Word dari data yang terkumpul
             if table_data:
                 num_rows = len(table_data)
                 num_cols = max(len(row) for row in table_data)
@@ -253,20 +269,17 @@ def to_word(text_content):
                         if c_idx < num_cols:
                             cell = table.cell(r_idx, c_idx)
                             cell.text = val
-                            # Bold untuk Header Tabel
                             if r_idx == 0:
                                 for paragraph in cell.paragraphs:
                                     for run in paragraph.runs:
                                         run.font.bold = True
-                
-                doc.add_paragraph() # Spasi setelah tabel
+                doc.add_paragraph()
                 table_data = []
                 in_table = False
 
         if not stripped:
             continue
 
-        # Parsing Header Markdown
         if stripped.startswith('# '):
             p = doc.add_paragraph()
             run = p.add_run(stripped[2:])
@@ -292,7 +305,6 @@ def to_word(text_content):
             run.font.bold = True
         elif stripped.startswith('* ') or stripped.startswith('- '):
             p = doc.add_paragraph(style='List Bullet')
-            # Parsing bold sederhana
             parts = stripped[2:].split('**')
             for idx, part in enumerate(parts):
                 run = p.add_run(part)
@@ -309,7 +321,6 @@ def to_word(text_content):
                 if idx % 2 == 1:
                     run.font.bold = True
 
-    # Jika tabel berada di paling akhir dokumen
     if in_table and table_data:
         num_rows = len(table_data)
         num_cols = max(len(row) for row in table_data)
@@ -329,7 +340,6 @@ def to_word(text_content):
     doc.save(output)
     return output.getvalue()
 
-# Helper Kalkulasi Nilai
 def hitung_kktp_dataframe(df, kktp_val):
     kolom_nilai = ["Formatif 1 (LKPD)", "Formatif 2 (Tugas)", "Sumatif Bab 1", "Sumatif Bab 2", "STS", "SAS"]
     for col in kolom_nilai:
@@ -350,45 +360,65 @@ def hitung_kktp_dataframe(df, kktp_val):
     )
     return df
 
-# ==========================================
-# FITUR 1: GENERATOR MODUL AJAR LENGKAP (DEEP LEARNING)
-# ==========================================
+# =============================================================================
+# FITUR 1: GENERATOR MODUL AJAR (1 PERTEMUAN UTUH - DEEP LEARNING)
+# =============================================================================
 if menu == "1. Generator Modul Ajar (Deep Learning)":
-    st.header("⚡ Generator Modul Ajar Lengkap & Komprehensif (Deep Learning)")
-    st.write("Format disesuaikan dengan Standar Modul Ajar Deep Learning (*Mindful, Meaningful, & Joyful Learning*) BSKAP No. 046/H/KR/2025 & Template Lengkap Drive.")
+    st.header("⚡ Generator Modul Ajar Lengkap (1 Pertemuan Utuh)")
+    st.caption("Pendekatan Deep Learning (Mindful, Meaningful, & Joyful Learning) - BSKAP No. 046/H/KR/2025")
 
     col1, col2 = st.columns(2)
     with col1:
+        st.subheader("📋 Informasi Sekolah & Pengajar")
         nama_sekolah = st.text_input("Nama Sekolah / Yayasan:", value="SMP YAYASAN INTERNASIONAL")
         nama_guru = st.text_input("Nama Guru / Penyusun:", value="Ridho Kurniawan, S.Pd.")
         mapel = st.selectbox("Mata Pelajaran:", ["Ilmu Pengetahuan Sosial (IPS)", "Pendidikan Pancasila (PPKn)"])
         tingkat_kelas = st.selectbox("Pilih Tingkatan Kelas:", ["Kelas VII / Fase D", "Kelas VIII / Fase D", "Kelas IX / Fase D"])
         semester = st.selectbox("Semester:", ["Ganjil", "Genap"])
-        fase_kelas = f"{tingkat_kelas} / {semester}"
+        hari = st.selectbox("Hari Mengajar:", ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"])
+        tahun_ajaran = st.text_input("Tahun Pelajaran:", value="2026/2027")
 
     with col2:
+        st.subheader("📖 Materi & Pengaturan Jam Pelajaran")
         draf_bab = DATABASE_MATERI.get(mapel, {}).get(tingkat_kelas, {})
         pilihan_bab = list(draf_bab.keys()) if draf_bab else ["Tidak ada data Bab"]
         bab_materi = st.selectbox("Pilih Bab / Topik Utama:", pilihan_bab)
         
         pilihan_sub_materi = draf_bab.get(bab_materi, [])
         sub_materi_terpilih = st.multiselect(
-            "Pilih Sub-Materi Pembelajaran (Bisa pilih lebih dari 1):",
+            "Pilih Sub-Materi Pembelajaran Hari Ini:",
             options=pilihan_sub_materi,
-            default=pilihan_sub_materi[:2] if pilihan_sub_materi else []
+            default=pilihan_sub_materi[:1] if pilihan_sub_materi else []
         )
-        str_sub_materi = ", ".join(sub_materi_terpilih) if sub_materi_terpilih else "Materi Pokok Bab"
+        str_sub_materi = ", ".join(sub_materi_terpilih) if sub_materi_terpilih else "Materi Pokok"
 
-        alokasi_jp = st.number_input("Alokasi Waktu Total (JP):", min_value=2, max_value=36, value=8, step=2)
-        tahun_ajaran = st.text_input("Tahun Pelajaran:", value="2026/2027")
+        jam_terpilih = st.multiselect(
+            "Pilih Jam Pelajaran untuk Pertemuan Ini:",
+            options=list(DATA_JAM_SEKOLAH.keys()),
+            default=["Jam 5", "Jam 6", "Jam 7"]
+        )
 
-    instruksi_khusus = st.text_area("Pendekatan / Catatan Khusus Guru (Konteks Sekolah):", value="Gunakan studi kasus nyata di lingkungan sekitar sekolah, diskusi kelompok berkolaborasi, dan presentasi produk visual/digital.")
+    st.markdown("---")
+    if st.button("🚀 Generate Modul Ajar (1 Pertemuan Utuh)", type="primary", use_container_width=True):
+        if not jam_terpilih:
+            st.error("❌ Silakan pilih minimal 1 jam pelajaran!")
+        else:
+            total_jp = len(jam_terpilih)
+            waktu_mulai = DATA_JAM_SEKOLAH[jam_terpilih[0]]["waktu"].split(" - ")[0]
+            waktu_selesai = DATA_JAM_SEKOLAH[jam_terpilih[-1]]["waktu"].split(" - ")[1]
+            total_menit = sum([DATA_JAM_SEKOLAH[j]["durasi"] for j in jam_terpilih])
+            rincian_jam_str = ", ".join(jam_terpilih)
+            
+            menit_awal = 10 if total_jp <= 2 else 15
+            menit_akhir = 10 if total_jp <= 2 else 15
+            menit_inti = total_menit - menit_awal - menit_akhir
 
-    if st.button("🚀 Generate Modul Ajar Deep Learning Lengkap"):
-        st.success(f"Berhasil meng-generate Modul Ajar Lengkap **{mapel}** berbasis **Deep Learning**!")
-        
-        # FORMAT KOMPREHENSIF LENGKAP SESUAI DRIVE DAN BSKAP 2025
-        modul_text = f"""
+            ada_zuhur = "Jam 5" in jam_terpilih and any(j in jam_terpilih for j in ["Jam 6", "Jam 7", "Jam 8"])
+            catatan_zuhur = "\n> **Catatan Jeda:** *Pertemuan ini terpotong jeda Shalat Zuhur (12:10 - 12:30 WIB) pada transisi Jam 5 ke Jam 6.*\n" if ada_zuhur else ""
+
+            st.success(f"✅ Modul Ajar 1 Pertemuan Berhasil Dibuat! Total: {total_jp} JP ({total_menit} Menit) | {waktu_mulai} - {waktu_selesai} WIB")
+
+            modul_text = f"""
 # MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING MODEL)
 **MATA PELAJARAN:** {mapel.upper()}  
 **STANDAR KEPUTUSAN BSKAP NOMOR 046/H/KR/2025**
@@ -401,133 +431,109 @@ if menu == "1. Generator Modul Ajar (Deep Learning)":
 * **Nama Sekolah:** {nama_sekolah}
 * **Nama Penyusun:** {nama_guru}
 * **Mata Pelajaran:** {mapel}
-* **Kelas / Fase / Semester:** {fase_kelas}
+* **Kelas / Fase / Semester:** {tingkat_kelas} / {semester}
+* **Pelaksanaan:** **1 Pertemuan Utuh** (Hari {hari}, {rincian_jam_str})
+* **Waktu Pelaksanaan:** Pukul {waktu_mulai} - {waktu_selesai} WIB
+* **Alokasi Waktu:** {total_jp} JP (Total Durasi Efektif: {total_menit} Menit)
 * **Bab / Tema Utama:** {bab_materi}
 * **Sub-Materi Pembelajaran:** {str_sub_materi}
-* **Alokasi Waktu:** {alokasi_jp} JP (2 Pertemuan x {alokasi_jp//2} JP)
 * **Tahun Pelajaran:** {tahun_ajaran}
 
 ### B. KOMPETENSI AWAL
-1. Peserta didik telah memahami konsep dasar kehidupan bermasyarakat dan lingkungan sosial sekitar.
-2. Peserta didik memiliki kemampuan awal dalam mengidentifikasi fenomena sosial/pancasila di lingkungan sehari-hari.
+1. Peserta didik telah memiliki pemahaman dasar terkait kehidupan sosial dan lingkungan sekitar.
+2. Peserta didik memiliki kemampuan awal dalam mengidentifikasi fenomena sosial/pancasila di kehidupan sehari-hari.
 
 ### C. PROFIL PELAJAR PANCASILA
-* **Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia:** Menghargai keberagaman dan norma sosial.
-* **Bernalar Kritis:** Mampu menganalisis fenomena sosial/pancasila secara objektif dan berbasis data.
-* **Gotong Royong:** Berkolaborasi secara efektif dalam diskusi kelompok dan penyelesaian tugas bersama.
-* **Kreatif:** Menghasilkan karya/solusi inovatif terkait topik {str_sub_materi}.
+* **Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia:** Menghargai norma dan nilai kemanusiaan.
+* **Bernalar Kritis:** Mampu menganalisis fenomena dan masalah kontekstual secara logis.
+* **Gotong Royong:** Berkolaborasi aktif dalam diskusi kelompok dan pemecahan masalah.
 
 ### D. SARANA DAN PRASARANA
-* **Media:** Laptop, Proyektor, Peta Konseptual/Digital, Slide Presentasi, Artikel Kasus, Lembar Kerja Peserta Didik (LKPD).
-* **Sumber Belajar:** Buku Paket Siswa Kurikulum Merdeka {mapel}, Artikel Berita, Lingkungan Sekitar Sekolah.
+* **Media:** Laptop, Proyektor, Slide Presentasi, Artikel Studi Kasus, Lembar Kerja Peserta Didik (LKPD).
+* **Sumber Belajar:** Buku Paket Siswa Kurikulum Merdeka {mapel}, Artikel Lingkungan Sekitar.
 
-### E. TARGET PESERTA DIDIK
-* **Target:** Peserta didik reguler / tipikal (tidak ada kesulitan dalam memahami materi ajar).
-* **Model Pembelajaran:** *Deep Learning Model* (Mindful, Meaningful, & Joyful Learning) dengan pendekatan *Problem-Based Learning* (PBL).
+### E. TARGET PESERTA DIDIK & MODEL
+* **Target:** Peserta didik reguler / tipikal.
+* **Model Pembelajaran:** *Deep Learning Model* (Mindful, Meaningful, & Joyful Learning) dengan pendekatan *Problem-Based Learning*.
 
 ---
 
 ## II. KOMPONEN INTI
 
 ### A. TUJUAN PEMBELAJARAN (TP)
-1. Peserta didik mampu mendeskripsikan dan menganalisis konsep {str_sub_materi} dengan tepat.
-2. Peserta didik mampu mengidentifikasi serta memecahkan masalah kontekstual yang berkaitan dengan {bab_materi} di kehidupan nyata.
-3. Peserta didik mampu menyajikan hasil analisis dan solusi kreatif mengenai {str_sub_materi} melalui presentasi atau media visual.
+1. Peserta didik mampu mendeskripsikan dan menganalisis konsep {str_sub_materi} secara kritis.
+2. Peserta didik mampu mengidentifikasi serta memecahkan masalah kontekstual yang berkaitan dengan {bab_materi}.
+3. Peserta didik mampu menyajikan hasil analisis kelompok melalui presentasi interaktif secara komunikatif.
 
 ### B. PEMAHAMAN BERMAKNA (MEANINGFUL LEARNING)
-* Pemahaman terhadap {str_sub_materi} membantu peserta didik menyadari peran aktifnya sebagai warga negara yang bijak, kritis, dan bertanggung jawab di tengah kehidupan sosial masyarakat.
+* Memahami {str_sub_materi} membantu peserta didik menyadari peran aktifnya sebagai warga negara yang kritis, bijak, dan bertanggung jawab.
 
 ### C. PERTANYAAN PEMANTIK
-1. *Mengapa topik {str_sub_materi} sangat dekat dan penting dalam kehidupan sehari-hari kita?*
-2. *Dampak apa yang akan terjadi jika kita tidak memahami dan menerapkan prinsip {bab_materi} di masyarakat?*
+1. *Mengapa fenomena {str_sub_materi} sangat dekat dengan kehidupan sehari-hari kita?*
+2. *Sikap apa yang harus kita tunjukkan saat menghadapi isu {bab_materi} di masyarakat?*
 
 ---
 
-## III. KEGIATAN PEMBELAJARAN DETAIL (DEEP LEARNING SYNTAX)
+## III. KEGIATAN PEMBELAJARAN (PERTEMUAN TUNGGAL - {total_jp} JP)
+{catatan_zuhur}
+### A. PENDAHULUAN ({menit_awal} MENIT) - *Mindful Start*
+1. **Pembukaan & Orientasi:** Guru menyapa peserta didik, memimpin doa bersama, dan mengecek kehadiran.
+2. **Apersepsi & Motivasi:** Guru mengaitkan materi **{str_sub_materi}** dengan pengalaman atau pengamatan sehari-hari peserta didik.
+3. **Penyampaian Tujuan:** Guru menjelaskan tujuan pembelajaran, alokasi waktu, serta skenario kegiatan pertemuan hari ini.
+4. **Pertanyaan Pemantik:** Guru menyampaikan pertanyaan pemantik untuk memicu keterlibatan aktif siswa.
 
-### PERTEMUAN 1 ({alokasi_jp//2} JP) - EKSPLORASI KONSEP & MINDFUL LEARNING
+### B. KEGIATAN INTI ({menit_inti} MENIT) - *Meaningful & Joyful Learning*
+1. **Eksplorasi Konsep (~15-20 Menit):** 
+   * Peserta didik mengamati tayangan/studi kasus nyata mengenai **{str_sub_materi}**.
+   * Guru memberikan penguatan awal konsep dasar terkait **{bab_materi}**.
+2. **Kolaborasi Kelompok (~{max(menit_inti - 35, 10)} Menit):** 
+   * Peserta didik dibagi ke dalam kelompok heterogen (4-5 siswa).
+   * Kelompok berdiskusi menyelesaikan analisis kasus pada LKPD terkait **{str_sub_materi}**.
+   * Guru mengobservasi dan memberikan bimbingan (*scaffolding*) sesuai kebutuhan kelompok.
+   *(Jika kegiatan melewati pukul 12:10 WIB, diskusi diistirahatkan sejenak untuk Shalat Zuhur).*
+3. **Unjuk Karya & Pleno (~15-20 Menit):** 
+   * Perwakilan kelompok mempresentasikan hasil solusi/diskusi di depan kelas.
+   * Kelompok lain memberikan masukan dan tanggapan secara kritis dan santun.
 
-#### 1. Pendahuluan (15 Menit) - *Mindful Start*
-* **Salam & Doa:** Guru membuka pembelajaran dengan salam dan berdoa bersama untuk membangun suasana religius.
-* **Apersepsi Kesadaran Utuh (Mindful Awareness):** Guru mengajak peserta didik melakukan refleksi singkat (mengamati gambar/video terkait {str_sub_materi}) dan menanyakan perasaan peserta didik sebelum belajar.
-* **Motivasi & Tujuan:** Guru menyampaikan tujuan pembelajaran, alokasi waktu, dan manfaat mempelajari {str_sub_materi}.
-
-#### 2. Kegiatan Inti ({alokasi_jp * 20 - 30} Menit) - *Meaningful & Joyful Exploration*
-* **Orientasi Masalah (Meaningful Learning):** Guru menyajikan studi kasus / fenomena nyata yang relevan dengan {str_sub_materi}.
-* **Pengorganisasian Kelompok:** Peserta didik dibagi menjadi beberapa kelompok heterogen (4-5 orang).
-* **Penyelidikan Terbimbing (Mindful Thinking):** Peserta didik mengumpulkan data dan membaca bahan ajar terkait {str_sub_materi}. Guru melakukan *scaffolding* (bimbingan) sesuai tingkat kebutuhan kelompok.
-* **Diskusi Interaktif (Joyful Collaboration):** Kelompok mendiskusikan pertanyaan pada LKPD 1 yang berfokus pada analisis akar masalah dan dampaknya.
-
-#### 3. Penutup (15 Menit)
-* Guru dan peserta didik membuat kesimpulan sementara.
-* Refleksi singkat mengenai pengalaman belajar hari ini (*Joyful Feedback*).
-* Doa penutup dan salam.
-
----
-
-### PERTEMUAN 2 ({alokasi_jp//2} JP) - APLIKASI, UNJUK KARYA & REFLEKSI
-
-#### 1. Pendahuluan (15 Menit)
-* Guru mereview kembali pemahaman dari Pertemuan 1 terkait {str_sub_materi}.
-* Guru menyampaikan alur kegiatan utama: Penyusunan Solusi dan Presentasi Karya.
-
-#### 2. Kegiatan Inti ({alokasi_jp * 20 - 30} Menit) - *Joyful Share & Action*
-* **Penyusunan Produk Kreatif:** Setiap kelompok merumuskan solusi atas masalah {str_sub_materi} dan menyajikannya dalam bentuk poster / infografis / ringkasan visual.
-* **Unjuk Kerja & Presentasi (*Joyful Share*):**
-  - Masing-masing kelompok mempresentasikan hasil karyanya di depan kelas.
-  - Kelompok lain memberikan masukan, pertanyaan, atau tanggapan apresiatif (*Peer Review*).
-* **Penguatan Konsep (Meaningful Assessment):** Guru memberikan konfirmasi, penguatan materi, dan meluruskan miskonsepsi.
-
-#### 3. Penutup (15 Menit) - *Deep Reflection*
-* **Refleksi Deep Learning:** Peserta didik mengisi lembar refleksi diri tentang apa yang telah dipelajari, perasaan saat berdiskusi, dan komitmen tindakan nyata.
-* **Evaluasi / Asesmen Sumatif Singkat:** Pengerjaan soal tes formatif/sumatif secara mandiri.
-* **Doa & Penutup.**
+### C. PENUTUP ({menit_akhir} MENIT) - *Deep Reflection*
+1. **Rangkuman & Kesimpulan:** Guru bersama peserta didik menyimpulkan poin utama materi **{str_sub_materi}**.
+2. **Refleksi Pembelajaran:** Peserta didik mengisi lembar refleksi singkat tentang proses belajar hari ini.
+3. **Apresiasi & Penutup:** Guru memberikan apresiasi, menyampaikan rencana materi minggu depan, dan mengakhiri dengan doa bersama.
 
 ---
 
-## IV. ASESMEN PEMBELAJARAN (PENILAIAN)
-
-1. **Asesmen Sikap:** Observasi Profil Pelajar Pancasila (Bernalar Kritis, Gotong Royong, Mandiri).
-2. **Asesmen Formatif:** Penilaian Diskusi Kelompok, Observasi Kesiapan, dan Pengerjaan LKPD.
-3. **Asesmen Sumatif:** Tes Tertulis Pilihan Ganda / Uraian Analitis mengenai {str_sub_materi}.
+## IV. ASESMEN & EVALUASI
+1. **Asesmen Sikap:** Observasi Profil Pelajar Pancasila (Bernalar Kritis, Gotong Royong).
+2. **Asesmen Formatif:** Penilaian kinerja diskusi kelompok dan pengerjaan LKPD.
+3. **Asesmen Performa:** Rubrik penilaian presentasi kelompok.
 
 ---
 
-## V. LAMPIRAN MODUL AJAR
+## V. LAMPIRAN (LKPD DEEP LEARNING)
 
-### A. LEMBAR KERJA PESERTA DIDIK (LKPD) DEEP LEARNING
-* **Nama Kelompok:** ...........................................
-* **Kelas:** {fase_kelas}
+### LEMBAR KERJA PESERTA DIDIK (LKPD)
+* **Kelompok:** ...........................................
+* **Kelas / Hari:** {tingkat_kelas} / {hari}
 * **Materi:** {str_sub_materi}
-* **Tugas Diskusi:**
-  1. Amatilah fenomena/masalah yang disajikan oleh guru mengenai {str_sub_materi}!
-  2. Analisislah penyebab utama timbulnya fenomena tersebut!
-  3. Rumuskan 3 solusi kreatif dan rasional yang dapat dilakukan oleh generasi muda untuk mengatasinya!
-  4. Sajikan hasil diskusimu dalam bentuk pameran karya visual / poster ringkas!
-
-### B. RUBRIK PENILAIAN DISKUSI & UNJUK KARYA
-| Kriteria Penilaian | Sangat Baik (4) | Baik (3) | Cukup (2) | Perlu Bimbingan (1) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Penguasaan Materi** | Menjelaskan {str_sub_materi} sangat akurat & analitis | Menjelaskan materi dengan akurat | Menjelaskan materi cukup akurat | Kurang memahami materi |
-| **Kerjasama Kelompok** | Semua anggota aktif dan saling mendukung | Sebagian besar anggota aktif | Hanya sebagian anggota aktif | Pasif dalam kelompok |
-| **Kreativitas Produk** | Sangat kreatif, rapi, dan komunikatif | Kreatif dan rapi | Cukup rapi | Less visual / tidak rapi |
+* **Instruksi Tugas:**
+  1. Amatilah studi kasus yang diberikan mengenai {str_sub_materi}!
+  2. Identifikasi masalah utama dan dampak yang ditimbulkannya!
+  3. Diskusikan 2-3 solusi nyata yang dapat diterapkan oleh pelajar!
+  4. Presentasikan hasil diskusimu di depan kelas!
 
 ---
 **Mengetahui,**  
-Kepala Sekolah SMP  
+Kepala Sekolah  
 
 **( .................................................... )**  
-NIP.  
 
 **Guru Mata Pelajaran**  
 
-**({nama_guru})**  
-NIP.
+**({nama_guru})**
         """
-        
+
         st.markdown(modul_text)
         
-        # Download Dokumen Word (.docx)
         word_data = to_word(modul_text)
         nama_file_clean = mapel.replace(" ", "_").replace("(", "").replace(")", "")
         
@@ -538,10 +544,34 @@ NIP.
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
-# ==========================================
-# FITUR 2: PRESENSI DROPDOWN LINTAS KELAS
-# ==========================================
-elif menu == "2. Presensi Dropdown Lintas Kelas":
+# =============================================================================
+# FITUR 2: INFO JADWAL JAM SEKOLAH
+# =============================================================================
+elif menu == "2. Info Jadwal Jam Sekolah":
+    st.header("🕒 Rincian Jam Pelajaran Sekolah")
+    st.write("Tabel acuan waktu dan durasi untuk tiap jam pelajaran:")
+    
+    jadwal_data = []
+    for k, v in DATA_JAM_SEKOLAH.items():
+        jadwal_data.append({
+            "Jam Pelajaran": k,
+            "Rentang Waktu": v["waktu"],
+            "Durasi (Menit)": f"{v['durasi']} Menit"
+        })
+    
+    st.table(jadwal_data)
+    
+    st.info("""
+    **Catatan Jadwal Istirahat & Shalat:**
+    * **Istirahat 1:** 09:30 - 09:45 WIB
+    * **Istirahat 2:** 11:05 - 11:20 WIB
+    * **Shalat Zuhur:** 12:10 - 12:30 WIB (Berada di antara Jam 5 dan Jam 6)
+    """)
+
+# =============================================================================
+# FITUR 3: PRESENSI DROPDOWN LINTAS KELAS
+# =============================================================================
+elif menu == "3. Presensi Dropdown Lintas Kelas":
     st.header("📋 Presensi Siswa Dropdown Lintas Kelas")
     selected_kelas = st.selectbox("Pilih Kelas:", daftar_kelas)
 
@@ -590,12 +620,12 @@ elif menu == "2. Presensi Dropdown Lintas Kelas":
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# ==========================================
-# FITUR 3: BUKU NILAI & KKTP (SATU TABEL TANPA DELAY)
-# ==========================================
+# =============================================================================
+# FITUR 4: BUKU NILAI & KKTP (SATU TABEL)
+# =============================================================================
 else:
     st.header("📖 Buku Nilai & Pengolahan Rapor Terpadu (Satu Tabel)")
-    st.write("Ketik atau ubah nilai secara langsung pada tabel. Hasil kalkulasi **Rata-Rata, Nilai Akhir, dan Status KKTP** akan langsung berada di tabel yang sama tanpa delay.")
+    st.write("Ketik atau ubah nilai secara langsung pada tabel. Hasil kalkulasi **Rata-Rata, Nilai Akhir, dan Status KKTP** langsung diperbarui otomatis.")
 
     col_k1, col_k2 = st.columns([2, 3])
     with col_k1:
