@@ -4,7 +4,6 @@ import json
 import os
 from docx import Document
 from io import BytesIO
-from datetime import date
 
 # ==========================================
 # 1. KONFIGURASI HALAMAN & CUSTOM STYLING (CSS)
@@ -16,15 +15,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Injeksi CSS untuk Tampilan Modern
 st.markdown("""
     <style>
-    /* Styling Container & Card */
     div[data-testid="stVerticalBlock"] > div[data-testid="stBlock"] {
         border-radius: 12px;
     }
-    
-    /* Header Banner Custom */
     .header-box {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         padding: 24px;
@@ -43,8 +38,6 @@ st.markdown("""
         margin: 5px 0 0 0;
         font-size: 0.95rem;
     }
-
-    /* Subheader Badges */
     .section-badge {
         background-color: #eef2f6;
         color: #1e3c72;
@@ -99,7 +92,6 @@ def load_materi_json():
         return {}
 
 def get_data_siswa(kelas_nama):
-    """Mencoba membaca file CSV (misal: kelas 7a.csv atau kelas 8.csv). Jika tidak ditemukan, gunakan dummy."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_name = f"{kelas_nama.lower()}.csv"
     file_path = os.path.join(base_dir, file_name)
@@ -147,27 +139,30 @@ with st.sidebar:
 DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
 
 # ==========================================
-# 5. INISIALISASI SESSION STATE (PRESENSI & NILAI)
+# 5. INISIALISASI SESSION STATE (KOSONG AWAL)
 # ==========================================
-key_p = f"presensi_matriks_{kelas_aktif}"
-key_n = f"nilai_kategori_{kelas_aktif}"
+key_p = f"presensi_blank_{kelas_aktif}"
+key_n = f"nilai_blank_{kelas_aktif}"
+key_kat = f"kategori_cols_{kelas_aktif}"
 
-# Presensi Matriks Bulanan (Tanggal 1-31)
+# Presensi Blank
 if key_p not in st.session_state:
     df_p = DF_SISWA_AKTIF.copy()
     for t in range(1, 32):
-        df_p[str(t)] = "H"  # Default 'H' (Hadir)
+        df_p[str(t)] = ""  # Dikosongkan
     st.session_state[key_p] = df_p
 
-# Buku Nilai Kategori
+# Nilai Blank (Sediakan 10 Kolom Nilai)
+JUMLAH_KOLOM_NILAI = 10
 if key_n not in st.session_state:
     df_n = DF_SISWA_AKTIF.copy()
-    df_n["Tugas Individu"] = 80.0
-    df_n["Tugas Kelompok"] = 80.0
-    df_n["Projek / Praktik"] = 80.0
-    df_n["UTS / Mid Semester"] = 80.0
-    df_n["UAS / Akhir Semester"] = 80.0
+    for i in range(1, JUMLAH_KOLOM_NILAI + 1):
+        df_n[f"N{i}"] = None  # Kosong (None)
     st.session_state[key_n] = df_n
+
+# Kategori per Kolom Nilai
+if key_kat not in st.session_state:
+    st.session_state[key_kat] = {f"N{i}": "Tugas Individu" for i in range(1, JUMLAH_KOLOM_NILAI + 1)}
 
 # ==========================================
 # 6. HEADER BANNER
@@ -317,165 +312,146 @@ V. LAMPIRAN (LKPD DEEP LEARNING & RUBRIK)
     )
 
 # ------------------------------------------
-# TAB 2: BUKU PRESENSI FISIK (MATRIKS BULANAN)
+# TAB 2: BUKU PRESENSI (KOSONG / KOSONGKAN)
 # ------------------------------------------
 with tab2:
-    st.subheader(f"📖 Buku Presensi Harian / Jurnal Kehadiran ({kelas_aktif})")
+    st.subheader(f"📖 Buku Presensi Harian ({kelas_aktif})")
     
     col_p1, col_p2 = st.columns([1, 2])
     with col_p1:
         bulan_presensi = st.selectbox(
             "Pilih Bulan Presensi",
             ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
-            index=8, # Default September
+            index=8,
             key=f"bln_{kelas_aktif}"
         )
     with col_p2:
-        st.info("💡 **Petunjuk Pengisian:** Isi kolom tanggal dengan kode **H** (Hadir), **S** (Sakit), **I** (Izin), atau **A** (Alpha). Ketik `-` jika libur.")
+        st.info("💡 **Petunjuk:** Tabel presensi disajikan kosong. Silakan isi kode: **H** (Hadir), **S** (Sakit), **I** (Izin), atau **A** (Alpha).")
 
-    # Ambil Data Session State Presensi
     df_p_edit = st.session_state[key_p].copy()
 
-    # Siapkan Config Kolom
-    col_config = {
+    col_config_p = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="medium"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
     for t in range(1, 32):
-        col_config[str(t)] = st.column_config.TextColumn(str(t), width="small")
+        col_config_p[str(t)] = st.column_config.TextColumn(str(t), width="small")
 
     with st.container(border=True):
-        st.caption(f"🗓️ **Jurnal Kehadiran Bulan {bulan_presensi} - {kelas_aktif}**")
+        st.caption(f"🗓️ **Presensi Bulan {bulan_presensi} - {kelas_aktif}**")
         edited_p_matrix = st.data_editor(
             df_p_edit,
-            column_config=col_config,
+            column_config=col_config_p,
             disabled=["No", "Nama", "Jenis Kelamin"],
             hide_index=True,
             use_container_width=True,
-            key=f"editor_p_matriks_{kelas_aktif}"
+            key=f"editor_p_blank_{kelas_aktif}"
         )
         st.session_state[key_p] = edited_p_matrix
 
-    # HITUNG REKAPITULASI (H, S, I, A)
+    # HITUNG REKAP PRESENSI (OTOMATIS DARI ISI MANUAL)
     tgl_cols = [str(t) for t in range(1, 32)]
-    
     df_rekap_p = edited_p_matrix[["No", "Nama", "Jenis Kelamin"]].copy()
-    df_rekap_p["Hadir (H)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.str.upper() == "H").sum(), axis=1)
-    df_rekap_p["Sakit (S)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.str.upper() == "S").sum(), axis=1)
-    df_rekap_p["Izin (I)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.str.upper() == "I").sum(), axis=1)
-    df_rekap_p["Alpha (A)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.str.upper() == "A").sum(), axis=1)
+    df_rekap_p["Hadir (H)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.astype(str).str.upper() == "H").sum(), axis=1)
+    df_rekap_p["Sakit (S)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.astype(str).str.upper() == "S").sum(), axis=1)
+    df_rekap_p["Izin (I)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.astype(str).str.upper() == "I").sum(), axis=1)
+    df_rekap_p["Alpha (A)"] = edited_p_matrix[tgl_cols].apply(lambda row: (row.astype(str).str.upper() == "A").sum(), axis=1)
 
     st.markdown(f"#### 📊 Rekapitulasi Presensi Bulan {bulan_presensi}")
-    st.dataframe(
-        df_rekap_p,
-        column_config={
-            "Hadir (H)": st.column_config.NumberColumn("Total Hadir"),
-            "Sakit (S)": st.column_config.NumberColumn("Total Sakit"),
-            "Izin (I)": st.column_config.NumberColumn("Total Izin"),
-            "Alpha (A)": st.column_config.NumberColumn("Total Alpha")
-        },
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(df_rekap_p, use_container_width=True, hide_index=True)
 
     st.divider()
-    csv_presensi_matriks = edited_p_matrix.to_csv(index=False).encode('utf-8')
+    csv_presensi = edited_p_matrix.to_csv(index=False).encode('utf-8')
     st.download_button(
         label=f"📥 Unduh Buku Presensi Bulan {bulan_presensi} ({kelas_aktif})",
-        data=csv_presensi_matriks,
+        data=csv_presensi,
         file_name=f"Buku_Presensi_{kelas_aktif}_{bulan_presensi}.csv",
         mime="text/csv",
         type="primary"
     )
 
 # ------------------------------------------
-# TAB 3: BUKU NILAI (DROPDOWN KATEGORI & REKAP REALTIME)
+# TAB 3: BUKU NILAI (TABEL TUNGGAL + KATEGORI HEADER DROPDOWN)
 # ------------------------------------------
 with tab3:
     st.subheader(f"📊 Buku Nilai Siswa ({kelas_aktif})")
-    
-    # DROPDOWN KATEGORI PENILAIAN
-    kat_selected = st.selectbox(
-        "📌 Pilih Kategori Penilaian yang Ingin Diinput/Diedit:",
-        ["Tugas Individu", "Tugas Kelompok", "Projek / Praktik", "UTS / Mid Semester", "UAS / Akhir Semester"],
-        key=f"kat_select_{kelas_aktif}"
-    )
+    st.caption("💡 Atur jenis penilaian pada setiap kolom di bawah ini, lalu isikan nilainya. Akumulasi nilai akhir akan terhitung otomatis.")
 
+    OPSI_KATEGORI = [
+        "Tugas Individu",
+        "Tugas Kelompok",
+        "Projek / Praktik",
+        "UTS / Mid Semester",
+        "UAS / Akhir Semester"
+    ]
+
+    # PENGATURAN DROPDOWN KATEGORI HEADER UNTUK KOLOM NILAI
+    with st.expander("⚙️ **Atur Jenis Penilaian untuk Setiap Kolom (Nilai 1 s.d Nilai 10)**", expanded=True):
+        cols_kat = st.columns(5)
+        for idx in range(1, JUMLAH_KOLOM_NILAI + 1):
+            col_target = cols_kat[(idx - 1) % 5]
+            with col_target:
+                st.session_state[key_kat][f"N{idx}"] = st.selectbox(
+                    f"Jenis Nilai #{idx}",
+                    OPSI_KATEGORI,
+                    index=0 if idx <= 5 else 1,
+                    key=f"sel_kat_N{idx}_{kelas_aktif}"
+                )
+
+    # PERSIAPAN TABEL TUNGGAL BUKU NILAI
     df_n_current = st.session_state[key_n].copy()
-
-    col_n1, col_n2 = st.columns([2, 1])
-    with col_n1:
-        with st.container(border=True):
-            st.markdown(f"##### ✏️ Form Input Nilai: **{kat_selected}**")
-            
-            # Buat Dataframe Khusus Tampilan Kategori Pilihan
-            df_input_kat = df_n_current[["No", "Nama", "Jenis Kelamin", kat_selected]].copy()
-            
-            edited_kat = st.data_editor(
-                df_input_kat,
-                column_config={
-                    "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
-                    "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
-                    "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
-                    kat_selected: st.column_config.NumberColumn(f"Nilai {kat_selected}", min_value=0.0, max_value=100.0, format="%.1f")
-                },
-                disabled=["No", "Nama", "Jenis Kelamin"],
-                hide_index=True,
-                use_container_width=True,
-                key=f"editor_kat_{kat_selected}_{kelas_aktif}"
-            )
-            
-            # Update Kembali Ke Session State
-            st.session_state[key_n][kat_selected] = edited_kat[kat_selected]
-
-    with col_b2 if 'col_b2' in locals() else col_n2:
-        with st.container(border=True):
-            st.markdown("##### ⚙️ Pengaturan Bobot Rapor (%)")
-            b_ind = st.number_input("Bobot Individu (%)", value=20, min_value=0, max_value=100)
-            b_kel = st.number_input("Bobot Kelompok (%)", value=20, min_value=0, max_value=100)
-            b_prj = st.number_input("Bobot Projek (%)", value=20, min_value=0, max_value=100)
-            b_uts = st.number_input("Bobot UTS (%)", value=20, min_value=0, max_value=100)
-            b_uas = st.number_input("Bobot UAS (%)", value=20, min_value=0, max_value=100)
-            kktp_limit = st.number_input("Batas Minimal KKTP", min_value=50.0, max_value=100.0, value=75.0, step=1.0)
-
-    # PERHITUNGAN AKUMULASI NILAI AKHIR (REALTIME)
-    df_rekap_n = st.session_state[key_n].copy()
     
-    total_bobot = b_ind + b_kel + b_prj + b_uts + b_uas
-    if total_bobot == 0:
-        total_bobot = 100 # Hindari Division by Zero
+    # Hitung Akumulasi Realtime (Rata-Rata Nilai yang Diisi)
+    col_nilai_list = [f"N{i}" for i in range(1, JUMLAH_KOLOM_NILAI + 1)]
+    df_n_current["Nilai Akhir (Akumulasi)"] = df_n_current[col_nilai_list].mean(axis=1, skipna=True).round(2)
 
-    df_rekap_n["Nilai Akhir Rapor"] = (
-        (df_rekap_n["Tugas Individu"] * b_ind) +
-        (df_rekap_n["Tugas Kelompok"] * b_kel) +
-        (df_rekap_n["Projek / Praktik"] * b_prj) +
-        (df_rekap_n["UTS / Mid Semester"] * b_uts) +
-        (df_rekap_n["UAS / Akhir Semester"] * b_uas)
-    ) / total_bobot
+    # Buat Config Header Dinamis (Nama Kolom + Jenis Penilaiannya)
+    column_config_n = {
+        "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
+        "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="large"),
+        "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
+    }
 
-    df_rekap_n["Nilai Akhir Rapor"] = df_rekap_n["Nilai Akhir Rapor"].round(2)
-    df_rekap_n["Status KKTP"] = df_rekap_n["Nilai Akhir Rapor"].apply(
-        lambda x: "✅ Tercapai" if x >= kktp_limit else "⚠️ Perlu Bimbingan"
+    for idx in range(1, JUMLAH_KOLOM_NILAI + 1):
+        kat_label = st.session_state[key_kat][f"N{idx}"]
+        column_config_n[f"N{idx}"] = st.column_config.NumberColumn(
+            f"N{idx} ({kat_label})",
+            min_value=0.0,
+            max_value=100.0,
+            format="%.1f",
+            width="medium"
+        )
+
+    column_config_n["Nilai Akhir (Akumulasi)"] = st.column_config.NumberColumn(
+        "Nilai Akhir (Realtime)",
+        disabled=True,
+        format="%.2f",
+        width="medium"
     )
 
-    st.markdown("#### 📋 Leger Akumulasi Seluruh Nilai Rapor (Realtime)")
-    st.dataframe(
-        df_rekap_n,
-        column_config={
-            "Nilai Akhir Rapor": st.column_config.NumberColumn("Nilai Akhir Rapor", format="%.2f"),
-            "Status KKTP": st.column_config.TextColumn("Status KKTP")
-        },
-        use_container_width=True,
-        hide_index=True
-    )
+    with st.container(border=True):
+        st.markdown(f"##### 📖 Buku Nilai Tunggal - **{kelas_aktif}**")
+        
+        edited_buku_nilai = st.data_editor(
+            df_n_current,
+            column_config=column_config_n,
+            disabled=["No", "Nama", "Jenis Kelamin", "Nilai Akhir (Akumulasi)"],
+            hide_index=True,
+            use_container_width=True,
+            key=f"editor_buku_nilai_tunggal_{kelas_aktif}"
+        )
+        
+        # Simpan Kembali Inputan Guru ke Session State
+        for col in col_nilai_list:
+            st.session_state[key_n][col] = edited_buku_nilai[col]
 
     st.divider()
-    csv_nilai = df_rekap_n.to_csv(index=False).encode('utf-8')
+    csv_buku_nilai = edited_buku_nilai.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label=f"📥 Unduh Leger Nilai Lengkap {kelas_aktif} (CSV)",
-        data=csv_nilai,
-        file_name=f"Leger_Nilai_{kelas_aktif}.csv",
+        label=f"📥 Unduh Buku Nilai Lengkap {kelas_aktif} (CSV)",
+        data=csv_buku_nilai,
+        file_name=f"Buku_Nilai_{kelas_aktif}.csv",
         mime="text/csv",
         type="primary"
     )
