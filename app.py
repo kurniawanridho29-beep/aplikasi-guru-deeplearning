@@ -207,36 +207,70 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # ------------------------------------------
-# TAB 1: GENERATOR MODUL AJAR (DEEP LEARNING MODEL FULL TEMPLATE)
+# TAB 1: GENERATOR MODUL AJAR (CUSTOMIZABLE MODEL, METODE & LKPD)
 # ------------------------------------------
 with tab1:
-    st.subheader("Konfigurasi Modul Ajar Kurikulum Merdeka (Deep Learning Model)")
+    st.subheader("⚙️ Konfigurasi Fleksibel Modul Ajar Kurikulum Merdeka")
+    
     col_a, col_b = st.columns(2)
     with col_a:
         with st.container(border=True):
+            st.markdown("**📖 Materi & Kurikulum**")
             if not DATABASE_MATERI:
                 mapel_selected = st.selectbox("Mata Pelajaran", ["Ilmu Pengetahuan Sosial (IPS)", "Pendidikan Pancasila (PPKn)"])
                 kelas_selected = st.selectbox("Jenjang Kelas Modul", ["Kelas VII", "Kelas VIII", "Kelas IX"])
-                bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Perubahan Sosial dan Globalisasi")
-                subbab_selected = st.text_input("Sub-Materi / Subbab", "Dampak Modernisasi & Globalisasi")
+                bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Kondisi Geografis dan Pelestarian SDA")
+                subbab_selected = st.text_input("Sub-Materi / Subbab", "Peran Lembaga Sosial dalam Pemanfaatan SDA dan SDM")
             else:
                 mapel_selected = st.selectbox("Mata Pelajaran", list(DATABASE_MATERI.keys()))
                 kelas_selected = st.selectbox("Jenjang Kelas Modul", list(DATABASE_MATERI[mapel_selected].keys()))
                 bab_dict = DATABASE_MATERI[mapel_selected][kelas_selected]
                 bab_selected = st.selectbox("Bab / Tema Utama", list(bab_dict.keys()))
                 subbab_selected = st.selectbox("Sub-Materi / Subbab", bab_dict[bab_selected])
-
-    with col_b:
-        with st.container(border=True):
+            
             fase_selected = st.selectbox("Fase", ["Fase D", "Fase E"])
             alokasi = st.text_input("Alokasi Waktu", "2 JP (2 Pertemuan x 1 JP)")
 
-    def generate_full_modul_doc(sekolah, penyusun, mapel, kelas, fase, semester, tahun, bab, subbab, alokasi):
+    with col_b:
+        with st.container(border=True):
+            st.markdown("**🎯 Strategi & Bentuk LKPD**")
+            
+            model_selected = st.selectbox(
+                "Model Pembelajaran",
+                [
+                    "Problem-Based Learning (PBL) - Deep Learning",
+                    "Project-Based Learning (PjBL) - Deep Learning",
+                    "Discovery / Inquiry Learning - Deep Learning",
+                    "Cooperative Learning (Jigsaw/STAD) - Deep Learning"
+                ]
+            )
+            
+            metode_selected = st.selectbox(
+                "Metode Pembelajaran",
+                [
+                    "Tanya Jawab Interaktif, Diskusi Kelompok, Presentasi & Refleksi",
+                    "Studi Kasus, Bedah Masalah & Unjuk Kerja",
+                    "Mind Mapping, Gallery Walk & Diskusi Pleno",
+                    "Observasi Lapangan, Penyelidikan Kelompok & Presentasi"
+                ]
+            )
+            
+            tipe_lkpd = st.selectbox(
+                "Pilihan Bentuk LKPD",
+                [
+                    "Matriks Peran & Studi Kasus Kontekstual (Tipe Review)",
+                    "Analisis Kasus 3-T (Teknologi, Tantangan, Tindakan)",
+                    "Mind Mapping / Peta Konsep Analitis",
+                    "Rancangan Proyek Kreatif & Unjuk Karya"
+                ]
+            )
+
+    def generate_custom_modul_doc(sekolah, penyusun, mapel, kelas, fase, semester, tahun, bab, subbab, alokasi, model, metode, lkpd_choice):
         doc = Document()
         
         # Title
         p_title = doc.add_paragraph()
-        run_title = p_title.add_run("MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING MODEL)\n")
+        run_title = p_title.add_run("MODUL AJAR KURIKULUM MERDEKA\n")
         run_title.bold = True
         p_title.add_run(f"MATA PELAJARAN: {mapel.upper()}\nSTANDAR KEPUTUSAN BSKAP NOMOR 046/H/KR/2025").bold = True
 
@@ -255,123 +289,133 @@ with tab1:
 
         doc.add_heading("KOMPETENSI AWAL", level=2)
         p_ka = doc.add_paragraph()
-        p_ka.add_run("• Peserta didik telah memahami konsep dasar kehidupan bermasyarakat dan lingkungan sosial sekitar.\n")
-        p_ka.add_run(f"• Peserta didik memiliki kemampuan awal dalam mengidentifikasi fenomena sosial/pancasila terkait {subbab} di lingkungan sehari-hari.")
+        p_ka.add_run(f"• Peserta didik telah membaca materi dasar mengenai {subbab}.\n")
+        p_ka.add_run(f"• Peserta didik memiliki pengetahuan awal dalam mengidentifikasi fenomena sosial terkait {bab} di lingkungan masyarakat.")
 
         doc.add_heading("PROFIL PELAJAR PANCASILA", level=2)
         p_p3 = doc.add_paragraph()
-        p_p3.add_run("• Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia: Menghargai keberagaman dan norma sosial.\n")
-        p_p3.add_run("• Bernalar Kritis: Mampu menganalisis fenomena sosial secara objektif dan berbasis data.\n")
-        p_p3.add_run("• Gotong Royong: Berkolaborasi secara efektif dalam diskusi kelompok dan penyelesaian tugas bersama.\n")
-        p_p3.add_run(f"• Kreatif: Menghasilkan karya/solusi inovatif terkait topik {subbab}.")
+        p_p3.add_run("• Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia: Menumbuhkan kesadaran moral & etika sosial.\n")
+        p_p3.add_run("• Bernalar Kritis: Mampu menganalisis masalah dan fenomena secara objektif.\n")
+        p_p3.add_run("• Gotong Royong: Berkolaborasi dan berdiskusi secara efektif dalam kelompok.\n")
+        p_p3.add_run(f"• Kreatif: Menghasilkan gagasan/solusi inovatif terkait {subbab}.")
 
         doc.add_heading("SARANA DAN PRASARANA", level=2)
         p_sp = doc.add_paragraph()
-        p_sp.add_run("• Media: Laptop, Proyektor, Peta Konseptual/Digital, Slide Presentasi, Artikel Kasus, Lembar Kerja Peserta Didik (LKPD).\n")
-        p_sp.add_run(f"• Sumber Belajar: Buku Paket Siswa Kurikulum Merdeka {mapel}, Artikel Berita, Lingkungan Sekitar Sekolah.")
+        p_sp.add_run("• Media Pembelajaran: Papan Tulis, Slide Presentasi, Kartu Kasus/Artikel, Lembar Kerja Peserta Didik (LKPD).\n")
+        p_sp.add_run(f"• Sumber Belajar Utama: Buku Paket / LKS Siswa {mapel}, Lingkungan Sekitar Sekolah.")
 
-        doc.add_heading("TARGET PESERTA DIDIK", level=2)
+        doc.add_heading("TARGET PESERTA DIDIK & STRATEGI PEMBELAJARAN", level=2)
         p_tp_d = doc.add_paragraph()
-        p_tp_d.add_run("• Target: Peserta didik reguler / tipikal (tidak ada kesulitan dalam memahami materi ajar).\n")
-        p_tp_d.add_run("• Model Pembelajaran: Deep Learning Model (Mindful, Meaningful, & Joyful Learning) dengan pendekatan Problem-Based Learning (PBL).")
+        p_tp_d.add_run("• Target Peserta Didik: Peserta didik reguler / tipikal.\n")
+        p_tp_d.add_run(f"• Model Pembelajaran: {model}\n")
+        p_tp_d.add_run(f"• Metode Pembelajaran: {metode}")
 
         doc.add_heading("II. KOMPONEN INTI", level=1)
         
         doc.add_heading("TUJUAN PEMBELAJARAN (TP)", level=2)
         p_tp = doc.add_paragraph()
-        p_tp.add_run(f"1. Peserta didik mampu mendeskripsikan dan menganalisis konsep {subbab} dengan tepat.\n")
-        p_tp.add_run(f"2. Peserta didik mampu mengidentifikasi serta memecahkan masalah kontekstual yang berkaitan dengan {bab} di kehidupan nyata.\n")
-        p_tp.add_run(f"3. Peserta didik mampu menyajikan hasil analisis dan solusi kreatif mengenai {subbab} melalui presentasi atau media visual.")
+        p_tp.add_run(f"1. Peserta didik mampu menjelaskan serta menganalisis konsep {subbab} secara tepat.\n")
+        p_tp.add_run(f"2. Peserta didik mampu mengidentifikasi serta memecahkan studi kasus kontekstual yang berkaitan dengan {bab}.\n")
+        p_tp.add_run(f"3. Peserta didik mampu menyajikan hasil diskusi dan analisis kelompok secara komunikatif di depan kelas.")
 
         doc.add_heading("PEMAHAMAN BERMAKNA (MEANINGFUL LEARNING)", level=2)
         p_mb = doc.add_paragraph()
-        p_mb.add_run(f"Pemahaman terhadap {subbab} membantu peserta didik menyadari peran aktifnya sebagai warga negara yang bijak, kritis, dan bertanggung jawab di tengah kehidupan sosial masyarakat.")
+        p_mb.add_run(f"Pemahaman terhadap {subbab} membantu peserta didik menyadari peran aktifnya sebagai warga negara yang bijak, kritis, dan bertanggung jawab di tengah kehidupan masyarakat.")
 
         doc.add_heading("PERTANYAAN PEMANTIK", level=2)
         p_pp = doc.add_paragraph()
-        p_pp.add_run(f"1. Mengapa topik {subbab} sangat dekat dan penting dalam kehidupan sehari-hari kita?\n")
-        p_pp.add_run(f"2. Dampak apa yang akan terjadi jika kita tidak memahami dan menerapkan prinsip {bab} di masyarakat?")
+        p_pp.add_run(f"1. Mengapa topik {subbab} sangat penting dalam kehidupan kita sehari-hari?\n")
+        p_pp.add_run(f"2. Dampak apa yang akan terjadi jika prinsip {bab} tidak diterapkan dengan baik di masyarakat?")
 
         doc.add_heading("III. KEGIATAN PEMBELAJARAN DETAIL", level=1)
         
         doc.add_heading("PENDAHULUAN (15 MENIT) - Mindful Start", level=2)
         p_pen = doc.add_paragraph()
-        p_pen.add_run("• Pembukaan & Orientasi: Guru menyapa siswa hangat, memimpin doa, mengecek kesiapan belajar, dan memeriksa presensi.\n")
-        p_pen.add_run(f"• Apersepsi Mindful: Guru mengajak siswa melakukan komparasi singkat antara pengetahuan awal mereka dengan fenomena riil {subbab}.\n")
-        p_pen.add_run(f"• Penyampaian Tujuan: Guru memaparkan tujuan pembelajaran hari ini, tahapan kegiatan, serta bentuk penilaian fokus sub-materi {subbab}.\n")
-        p_pen.add_run(f"• Pertanyaan Pemantik: Guru melemparkan pertanyaan pemantik untuk memicu minat dan daya kritis siswa terhadap topik {subbab}.")
+        p_pen.add_run("• Orientasi Kelas: Guru menyapa peserta didik, memimpin doa, dan mengecek presensi kehadiran.\n")
+        p_pen.add_run(f"• Apersepsi Mindful: Guru memberikan pemantik singkat untuk memancing pengetahuan awal siswa terkait {subbab}.\n")
+        p_pen.add_run(f"• Penyampaian Tujuan: Guru menjelaskan tujuan pembelajaran dan skenario kegiatan dengan model {model}.")
 
-        doc.add_heading("KEGIATAN INTI (80 MENIT) - Meaningful & Joyful Learning", level=2)
+        doc.add_heading(f"KEGIATAN INTI (50 MENIT) - Meaningful & Joyful ({model})", level=2)
         p_inti = doc.add_paragraph()
-        p_inti.add_run(f"1. Eksplorasi Konsep & Orientasi Masalah (~15-20 Menit):\n")
-        p_inti.add_run(f"   - Peserta didik mencermati tayangan visual/studi kasus faktual mengenai {subbab}.\n")
-        p_inti.add_run(f"   - Guru memfasilitasi penjelajahan konsep dasar terkait sub-materi {subbab} secara dialogis dan interaktif menggunakan metode Studi Kasus / Storytelling.\n\n")
-        p_inti.add_run(f"2. Kolaborasi Kelompok & Penyelidikan (~45 Menit):\n")
-        p_inti.add_run(f"   - Peserta didik dibagi ke dalam kelompok kecil heterogen (4-5 siswa) menerapkan sintaks Discovery Learning.\n")
-        p_inti.add_run(f"   - Masing-masing kelompok mendalami lembar kerja (LKPD) yang memuat problematik nyata terkait {subbab}.\n")
-        p_inti.add_run(f"   - Guru melakukan pendampingan terarah (scaffolding) pada kelompok yang membutuhkan penguatan pemahaman.\n\n")
-        p_inti.add_run(f"3. Unjuk Karya & Diskusi Pleno (~15-20 Menit):\n")
-        p_inti.add_run(f"   - Perwakilan kelompok mempresentasikan analisis dan rekomendasi solusi sub-materi {subbab} di depan kelas.\n")
-        p_inti.add_run(f"   - Kelompok lain memberikan tanggapan, sanggahan santun, atau pertanyaan konstruktif (Joyful interaction).")
+        p_inti.add_run(f"1. Orientasi / Stimulasi Masalah (~10 Menit):\n   Guru menyajikan contoh fenomena/masalah nyata di masyarakat terkait {subbab}.\n\n")
+        p_inti.add_run(f"2. Mengorganisasikan Kelompok (~5 Menit):\n   Siswa dibagi menjadi kelompok kecil (3-4 siswa) dan dibagikan {lkpd_choice}.\n\n")
+        p_inti.add_run(f"3. Penyelidikan & Penerapan Metode ({metode}) (~20 Menit):\n   Siswa berdiskusi menyelesaikan tugas pada LKPD dengan bimbingan terarah (scaffolding) dari guru.\n\n")
+        p_inti.add_run(f"4. Mengembangkan & Menyajikan Hasil Karya (~15 Menit):\n   Perwakilan kelompok mempresentasikan hasil analisis LKPD di depan kelas dan ditanggapi kelompok lain.")
 
         doc.add_heading("PENUTUP (15 MENIT) - Deep Reflection", level=2)
         p_penutup = doc.add_paragraph()
-        p_penutup.add_run(f"• Sintesis & Rangkuman: Guru bersama siswa merangkum poin kunci dan kesimpulan utama dari pembahasan {subbab}.\n")
-        p_penutup.add_run(f"• Refleksi Deep Learning: Peserta didik merefleksikan proses belajar: 'Apa pemahaman baru terbesar yang saya dapatkan dari sub-materi {subbab}?'\n")
-        p_penutup.add_run("• Apresiasi & Tindak Lanjut: Guru memberikan apresiasi atas partisipasi aktif kelas, menyampaikan pengantar materi untuk pertemuan berikutnya, dan menutup dengan doa bersama.")
+        p_penutup.add_run(f"• Sintesis & Rangkuman: Guru bersama peserta didik merangkum poin kunci dari {subbab}.\n")
+        p_penutup.add_run("• Refleksi Pembelajaran: Peserta didik menuliskan 1 kalimat refleksi: 'Satu hal paling penting yang saya pelajari hari ini adalah ...'\n")
+        p_penutup.add_run("• Apresiasi & Tindak Lanjut: Guru memberikan pujian atas partisipasi aktif siswa dan menutup kelas dengan doa bersama.")
 
         doc.add_heading("IV. ASESMEN PEMBELAJARAN (PENILAIAN)", level=1)
         p_as = doc.add_paragraph()
         p_as.add_run("• Asesmen Sikap: Observasi Profil Pelajar Pancasila (Bernalar Kritis, Gotong Royong, Mandiri).\n")
-        p_as.add_run("• Asesmen Formatif: Penilaian Diskusi Kelompok, Observasi Kesiapan, dan Pengerjaan LKPD.\n")
-        p_as.add_run(f"• Asesmen Sumatif: Tes Tertulis Pilihan Ganda / Uraian Analitis mengenai {subbab}.")
+        p_as.add_run(f"• Asesmen Formatif: Penilaian Diskusi Kelompok & Kinerja Pengerjaan {lkpd_choice}.\n")
+        p_as.add_run("• Asesmen Sumatif: Hasil Akhir Pengerjaan Lembar Kerja Peserta Didik (LKPD).")
 
-        doc.add_heading("V. LAMPIRAN MODUL AJAR", level=1)
+        doc.add_heading("V. LAMPIRAN: LEMBAR KERJA PESERTA DIDIK (LKPD)", level=1)
         
-        doc.add_heading("A. LEMBAR KERJA PESERTA DIDIK (LKPD) DEEP LEARNING", level=2)
+        doc.add_heading(f"LEMBAR KERJA PESERTA DIDIK ({lkpd_choice.upper()})", level=2)
         p_lkpd = doc.add_paragraph()
         p_lkpd.add_run(f"Nama Kelompok : ....................................\nKelas : {kelas}\nAnggota Kelompok : 1. ..... 2. ..... 3. ..... 4. .....\n\n")
-        p_lkpd.add_run("PETUNJUK DISKUSI:\n")
-        p_lkpd.add_run(f"1. Simaklah tayangan video/artikel mengenai fenomena {subbab} yang diputar/dibagikan di depan kelas dengan saksama.\n")
-        p_lkpd.add_run("2. Catatlah poin-poin penting selama materi berlangsung.\n")
-        p_lkpd.add_run("3. Diskusikan dan jawablah pertanyaan analisis di bawah ini bersama anggota kelompokmu.\n\n")
         
-        p_lkpd.add_run("PERTANYAAN ANALISIS KASUS (RUMUS 3-T):\n").bold = True
-        p_lkpd.add_run("1. TEKNOLOGI PENDORONG (T-1):\n   Berdasarkan materi, sarana atau teknologi apa saja yang menjadi jalan utama sehingga fenomena ini memengaruhi masyarakat dengan cepat?\n\n")
-        p_lkpd.add_run(f"2. TANTANGAN DAN DAMPAK (T-2):\n   Amatilah perubahan perilaku masyarakat akibat {subbab}. Tuliskan 2 dampak positif dan 2 dampak negatifnya!\n   - Dampak Positif: 1. ..... 2. .....\n   - Dampak Negatif: 1. ..... 2. .....\n\n")
-        p_lkpd.add_run("3. TINDAKAN DAN SOLUSI (T-3):\n   Sebagai generasi muda yang bijak, tindakan nyata apa yang harus kalian lakukan agar tetap bisa berkembang tanpa kehilangan identitas dan moral bangsa?\n\n")
-        p_lkpd.add_run("\"Nilai-nilai luhur bangsa adalah jangkar kita di tengah arus perubahan zaman.\"\n")
+        # MENYESUAIKAN ISI LKPD SESUAI PILIHAN GURU
+        if "Matriks Peran" in lkpd_choice:
+            p_lkpd.add_run("BAGIAN A: MATRIKS ANALISIS TABEL\nIsilah tabel di bawah ini berdasarkan bacaan/materi yang telah dipelajari!\n").bold = True
+            table_m = doc.add_table(rows=4, cols=3)
+            table_m.style = 'Table Grid'
+            table_m.rows[0].cells[0].text = 'No'
+            table_m.rows[0].cells[1].text = 'Kategori / Komponen'
+            table_m.rows[0].cells[2].text = f'Analisis Peran dalam {subbab}'
+            for i in range(1, 4):
+                table_m.rows[i].cells[0].text = str(i)
+            
+            doc.add_paragraph("\nBAGIAN B: STUDI KASUS KONTEKSTUAL\nBacalah kasus di bawah ini lalu berikan solusinya:\n\"Di sebuah daerah terjadi permasalahan sosial dan lingkungan terkait pemanfaatan sumber daya. Jelaskan lembaga/pihak mana saja yang harus memberikan solusi!\"\nJawaban: ....................................................................................................................................................................................................................................................................................").bold = True
+            
+        elif "3-T" in lkpd_choice:
+            p_lkpd.add_run("ANALISIS KASUS BERDASARKAN RUMUS 3-T:\n").bold = True
+            p_lkpd.add_run("1. TEKNOLOGI / PENDORONG (T-1):\n   Sarana/faktor apa yang menjadi pendorong utama munculnya fenomena ini?\n   Jawaban: ....................................................................................................\n\n")
+            p_lkpd.add_run("2. TANTANGAN DAN DAMPAK (T-2):\n   Tuliskan 2 dampak positif dan 2 dampak negatif dari fenomena ini!\n   - Positif: 1. ..... 2. .....\n   - Negatif: 1. ..... 2. .....\n\n")
+            p_lkpd.add_run("3. TINDAKAN DAN SOLUSI (T-3):\n   Tindakan nyata apa yang harus dilakukan generasi muda untuk mengatasi tantangan tersebut?\n   Jawaban: ....................................................................................................\n")
+            
+        elif "Mind Mapping" in lkpd_choice:
+            p_lkpd.add_run("PETUNJUK PETA KONSEP (MIND MAPPING):\n").bold = True
+            p_lkpd.add_run(f"1. Buatlah Peta Konsep / Mind Map di lembar ini mengenai hubungan antara {bab} dengan {subbab}!\n")
+            p_lkpd.add_run("2. Gunakan kata kunci, cabang utama, cabang pembantu, serta warna/gambar menarik.\n")
+            p_lkpd.add_run("3. Jelaskan secara singkat alur peta konsep kelompokmu di depan kelas!\n\n[ KOTAK LEMBAR KERJA PETA KONSEP ]\n\n\n\n\n")
+            
+        else: # Proyek Kreatif
+            p_lkpd.add_run("PERANCANGAN PROYEK KREATIF KELOMPOK:\n").bold = True
+            p_lkpd.add_run(f"1. Judul Produk / Karya: (Poster / Infografis / Video Short mengenai {subbab})\n")
+            p_lkpd.add_run("2. Alasan Pemilihan Produk: ....................................................................................\n")
+            p_lkpd.add_run("3. Langkah-Langkah Pembuatan Proyek:\n   a. .....\n   b. .....\n   c. .....\n")
+            p_lkpd.add_run("4. Pembagian Tugas Anggota Kelompok: ....................................................................................\n")
 
-        doc.add_heading("B. RUBRIK PENILAIAN DISKUSI & UNJUK KARYA", level=2)
-        table = doc.add_table(rows=4, cols=5)
-        table.style = 'Table Grid'
-        hdr_cells = table.rows[0].cells
-        hdr_cells[0].text = 'Kriteria Penilaian'
+        # Rubrik Penilaian
+        doc.add_heading("RUBRIK PENILAIAN KELOMPOK", level=2)
+        table_r = doc.add_table(rows=3, cols=5)
+        table_r.style = 'Table Grid'
+        hdr_cells = table_r.rows[0].cells
+        hdr_cells[0].text = 'Kriteria'
         hdr_cells[1].text = 'Sangat Baik (4)'
         hdr_cells[2].text = 'Baik (3)'
         hdr_cells[3].text = 'Cukup (2)'
         hdr_cells[4].text = 'Perlu Bimbingan (1)'
         
-        row1 = table.rows[1].cells
-        row1[0].text = 'Penguasaan Materi'
-        row1[1].text = f'Menjelaskan {subbab} sangat akurat & analitis'
-        row1[2].text = 'Menjelaskan materi dengan akurat'
-        row1[3].text = 'Menjelaskan materi cukup akurat'
-        row1[4].text = 'Kurang memahami materi'
+        row1 = table_r.rows[1].cells
+        row1[0].text = 'Gotong Royong'
+        row1[1].text = 'Semua aktif & kompak'
+        row1[2].text = 'Sebagian besar aktif'
+        row1[3].text = 'Hanya 1-2 siswa dominan'
+        row1[4].text = 'Pasif'
 
-        row2 = table.rows[2].cells
-        row2[0].text = 'Kerjasama Kelompok'
-        row2[1].text = 'Semua anggota aktif dan saling mendukung'
-        row2[2].text = 'Sebagian besar anggota aktif'
-        row2[3].text = 'Hanya sebagian anggota aktif'
-        row2[4].text = 'Pasif dalam kelompok'
-
-        row3 = table.rows[3].cells
-        row3[0].text = 'Kreativitas Produk'
-        row3[1].text = 'Sangat kreatif, rapi, dan komunikatif'
-        row3[2].text = 'Kreatif dan rapi'
-        row3[3].text = 'Cukup rapi'
-        row3[4].text = 'Kurang rapi / Less visual'
+        row2 = table_r.rows[2].cells
+        row2[0].text = 'Bernalar Kritis'
+        row2[1].text = 'Analisis sangat dalam & solutif'
+        row2[2].text = 'Analisis cukup mendalam'
+        row2[3].text = 'Jawaban umum'
+        row2[4].text = 'Belum mampu menjawab'
 
         # Tanda Tangan
         doc.add_paragraph("\n\n")
@@ -384,12 +428,16 @@ with tab1:
         buf.seek(0)
         return buf
 
-    buf_doc = generate_full_modul_doc(sekolah, penyusun, mapel_selected, kelas_selected, fase_selected, semester, tahun, bab_selected, subbab_selected, alokasi)
+    buf_doc = generate_custom_modul_doc(
+        sekolah, penyusun, mapel_selected, kelas_selected, fase_selected, 
+        semester, tahun, bab_selected, subbab_selected, alokasi, 
+        model_selected, metode_selected, tipe_lkpd
+    )
 
     st.download_button(
-        label="📥 Download Modul Ajar Deep Learning Lengkap (.docx)",
+        label="📥 Download Modul Ajar Custom (.docx)",
         data=buf_doc,
-        file_name=f"Modul_Ajar_DeepLearning_{mapel_selected}_{kelas_selected}.docx",
+        file_name=f"Modul_Ajar_{mapel_selected}_{kelas_selected}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         type="primary"
     )
