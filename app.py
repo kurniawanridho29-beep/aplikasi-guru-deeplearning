@@ -95,7 +95,7 @@ def save_data_to_sheet(sheet_name, df):
     return False
 
 # ==========================================
-# 3. DATASET SISWA DUMMY (FALLBACK)
+# 3. DATASET SISWA & HELPER (PEMBACAAN CSV & FALLBACK)
 # ==========================================
 DUMMY_SISWA = {
     "Kelas 7A": [
@@ -128,6 +128,24 @@ def load_materi_json():
         return {}
 
 def get_data_siswa(kelas_nama):
+    # Pengecekan file CSV lokal berdasarkan variasi nama file
+    possible_filenames = [
+        f"{kelas_nama.upper()}.csv",
+        f"{kelas_nama}.csv",
+        f"{kelas_nama.lower()}.csv"
+    ]
+    
+    for filename in possible_filenames:
+        filepath = os.path.join(BASE_DIR, filename)
+        if os.path.exists(filepath):
+            try:
+                df_csv = pd.read_csv(filepath)
+                if not df_csv.empty:
+                    return df_csv
+            except Exception:
+                pass
+
+    # Fallback ke DUMMY_SISWA jika file CSV tidak ditemukan
     list_nama = DUMMY_SISWA.get(kelas_nama, DUMMY_SISWA["Kelas 7A"])
     jk_list = ["L" if i % 2 == 0 else "P" for i in range(len(list_nama))]
     return pd.DataFrame({"No": range(1, len(list_nama) + 1), "Nama": list_nama, "Jenis Kelamin": jk_list})
@@ -147,7 +165,7 @@ with st.sidebar:
     kelas_aktif = st.selectbox(
         "Pilih Kelas Aktif",
         ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"],
-        index=0
+        index=1
     )
     tahun = st.text_input("Tahun Pelajaran", "2026/2027")
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
@@ -172,7 +190,7 @@ key_n = f"nilai_{kelas_aktif}"
 
 if key_p not in st.session_state:
     df_cloud_p = load_data_from_sheet(f"Presensi_{kelas_aktif}")
-    if df_cloud_p is not None and not df_cloud_p.empty:
+    if df_cloud_p is not None and not df_cloud_p.empty and len(df_cloud_p) == len(DF_SISWA_AKTIF):
         st.session_state[key_p] = df_cloud_p
     else:
         df_p = DF_SISWA_AKTIF.copy()
@@ -182,7 +200,7 @@ if key_p not in st.session_state:
 
 if key_n not in st.session_state:
     df_cloud_n = load_data_from_sheet(f"Nilai_{kelas_aktif}")
-    if df_cloud_n is not None and not df_cloud_n.empty:
+    if df_cloud_n is not None and not df_cloud_n.empty and len(df_cloud_n) == len(DF_SISWA_AKTIF):
         st.session_state[key_n] = df_cloud_n
     else:
         df_n = DF_SISWA_AKTIF.copy()
@@ -207,7 +225,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # ------------------------------------------
-# TAB 1: GENERATOR MODUL AJAR (CUSTOMIZABLE MODEL, METODE & LKPD)
+# TAB 1: GENERATOR MODUL AJAR
 # ------------------------------------------
 with tab1:
     st.subheader("⚙️ Konfigurasi Fleksibel Modul Ajar Kurikulum Merdeka")
@@ -360,7 +378,6 @@ with tab1:
         p_lkpd = doc.add_paragraph()
         p_lkpd.add_run(f"Nama Kelompok : ....................................\nKelas : {kelas}\nAnggota Kelompok : 1. ..... 2. ..... 3. ..... 4. .....\n\n")
         
-        # MENYESUAIKAN ISI LKPD SESUAI PILIHAN GURU
         if "Matriks Peran" in lkpd_choice:
             p_lkpd.add_run("BAGIAN A: MATRIKS ANALISIS TABEL\nIsilah tabel di bawah ini berdasarkan bacaan/materi yang telah dipelajari!\n").bold = True
             table_m = doc.add_table(rows=4, cols=3)
@@ -385,14 +402,13 @@ with tab1:
             p_lkpd.add_run("2. Gunakan kata kunci, cabang utama, cabang pembantu, serta warna/gambar menarik.\n")
             p_lkpd.add_run("3. Jelaskan secara singkat alur peta konsep kelompokmu di depan kelas!\n\n[ KOTAK LEMBAR KERJA PETA KONSEP ]\n\n\n\n\n")
             
-        else: # Proyek Kreatif
+        else:
             p_lkpd.add_run("PERANCANGAN PROYEK KREATIF KELOMPOK:\n").bold = True
             p_lkpd.add_run(f"1. Judul Produk / Karya: (Poster / Infografis / Video Short mengenai {subbab})\n")
             p_lkpd.add_run("2. Alasan Pemilihan Produk: ....................................................................................\n")
             p_lkpd.add_run("3. Langkah-Langkah Pembuatan Proyek:\n   a. .....\n   b. .....\n   c. .....\n")
             p_lkpd.add_run("4. Pembagian Tugas Anggota Kelompok: ....................................................................................\n")
 
-        # Rubrik Penilaian
         doc.add_heading("RUBRIK PENILAIAN KELOMPOK", level=2)
         table_r = doc.add_table(rows=3, cols=5)
         table_r.style = 'Table Grid'
@@ -417,7 +433,6 @@ with tab1:
         row2[3].text = 'Jawaban umum'
         row2[4].text = 'Belum mampu menjawab'
 
-        # Tanda Tangan
         doc.add_paragraph("\n\n")
         p_ttd = doc.add_paragraph()
         p_ttd.add_run("Mengetahui,\t\t\t\t\t\tGuru Mata Pelajaran\nKepala Sekolah\n\n\n\n").bold = True
