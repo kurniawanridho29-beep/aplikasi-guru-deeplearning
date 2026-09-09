@@ -95,7 +95,7 @@ def save_data_to_sheet(sheet_name, df):
     return False
 
 # ==========================================
-# 3. DATASET SISWA & HELPER (PEMBACAAN CSV & FALLBACK)
+# 3. DATASET SISWA & HELPER (CSV & FALLBACK)
 # ==========================================
 DUMMY_SISWA = {
     "Kelas 7A": [
@@ -128,7 +128,6 @@ def load_materi_json():
         return {}
 
 def get_data_siswa(kelas_nama):
-    # Pengecekan file CSV lokal berdasarkan variasi nama file
     possible_filenames = [
         f"{kelas_nama.upper()}.csv",
         f"{kelas_nama}.csv",
@@ -145,7 +144,6 @@ def get_data_siswa(kelas_nama):
             except Exception:
                 pass
 
-    # Fallback ke DUMMY_SISWA jika file CSV tidak ditemukan
     list_nama = DUMMY_SISWA.get(kelas_nama, DUMMY_SISWA["Kelas 7A"])
     jk_list = ["L" if i % 2 == 0 else "P" for i in range(len(list_nama))]
     return pd.DataFrame({"No": range(1, len(list_nama) + 1), "Nama": list_nama, "Jenis Kelamin": jk_list})
@@ -161,7 +159,13 @@ with st.sidebar:
     penyusun = st.text_input("Nama Guru / Penyusun", "Ridho Kurniawan, S.Pd.")
     
     st.divider()
-    st.markdown("### 🏫 Pengaturan Kelas & Semester")
+    st.markdown("### 🏫 Pengaturan Kelas & Mapel")
+    
+    mapel_aktif = st.selectbox(
+        "Pilih Mata Pelajaran",
+        ["PPKn", "IPS"]
+    )
+    
     kelas_aktif = st.selectbox(
         "Pilih Kelas Aktif",
         ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"],
@@ -183,14 +187,42 @@ KATEGORI_NILAI_OPSI = [
 ]
 
 # ==========================================
-# 5. SINKRONISASI SESSION STATE & GOOGLE SHEETS
+# 5. SINKRONISASI DATA LAMA KE MAPEL TERPISAH
 # ==========================================
-key_p = f"presensi_{kelas_aktif}"
-key_n = f"nilai_{kelas_aktif}"
+key_p = f"presensi_{mapel_aktif}_{kelas_aktif}"
+key_n = f"nilai_{mapel_aktif}_{kelas_aktif}"
 
+sheet_p_name = f"Presensi_{mapel_aktif}_{kelas_aktif}"
+sheet_n_name = f"Nilai_{mapel_aktif}_{kelas_aktif}"
+
+sheet_p_old = f"Presensi_{kelas_aktif}"
+sheet_n_old = f"Nilai_{kelas_aktif}"
+
+# --- PEMUATAN DATA PRESENSI ---
 if key_p not in st.session_state:
-    df_cloud_p = load_data_from_sheet(f"Presensi_{kelas_aktif}")
-    if df_cloud_p is not None and not df_cloud_p.empty and len(df_cloud_p) == len(DF_SISWA_AKTIF):
+    df_cloud_p = load_data_from_sheet(sheet_p_name)
+    
+    # Jika sheet khusus mapel belum dibuat, tarik data lama dari sheet gabungan
+    if df_cloud_p is None or df_cloud_p.empty:
+        df_old_p = load_data_from_sheet(sheet_p_old)
+        if df_old_p is not None and not df_old_p.empty:
+            df_cloud_p = df_old_p.copy()
+            tgl_cols = [str(t) for t in range(1, 32)]
+            for t in tgl_cols:
+                if t in df_cloud_p.columns:
+                    # Filter tanggal presensi sesuai kronologi input kamu
+                    if kelas_aktif == "Kelas 7A" and mapel_aktif == "IPS" and t == "7":
+                        df_cloud_p[t] = ""
+                    elif kelas_aktif == "Kelas 7B" and mapel_aktif == "PPKn" and t == "9":
+                        df_cloud_p[t] = ""
+                    elif kelas_aktif == "Kelas 7B" and mapel_aktif == "IPS" and t == "8":
+                        df_cloud_p[t] = ""
+                    elif kelas_aktif == "Kelas 8" and mapel_aktif == "IPS" and t == "8":
+                        df_cloud_p[t] = ""
+                    elif kelas_aktif == "Kelas 9" and mapel_aktif == "PPKn" and t == "7":
+                        df_cloud_p[t] = ""
+
+    if df_cloud_p is not None and not df_cloud_p.empty:
         st.session_state[key_p] = df_cloud_p
     else:
         df_p = DF_SISWA_AKTIF.copy()
@@ -198,9 +230,20 @@ if key_p not in st.session_state:
             df_p[str(t)] = ""
         st.session_state[key_p] = df_p
 
+# --- PEMUATAN DATA BUKU NILAI ---
 if key_n not in st.session_state:
-    df_cloud_n = load_data_from_sheet(f"Nilai_{kelas_aktif}")
-    if df_cloud_n is not None and not df_cloud_n.empty and len(df_cloud_n) == len(DF_SISWA_AKTIF):
+    df_cloud_n = load_data_from_sheet(sheet_n_name)
+    
+    if df_cloud_n is None or df_cloud_n.empty:
+        df_old_n = load_data_from_sheet(sheet_n_old)
+        if df_old_n is not None and not df_old_n.empty:
+            # Nilai Tugas Individu/Kelompok Kelas 7A otomatis masuk ke PPKn
+            if kelas_aktif == "Kelas 7A" and mapel_aktif == "PPKn":
+                df_cloud_n = df_old_n.copy()
+            elif kelas_aktif != "Kelas 7A":
+                df_cloud_n = df_old_n.copy()
+
+    if df_cloud_n is not None and not df_cloud_n.empty:
         st.session_state[key_n] = df_cloud_n
     else:
         df_n = DF_SISWA_AKTIF.copy()
@@ -214,14 +257,14 @@ if key_n not in st.session_state:
 st.markdown(f"""
     <div class="header-box">
         <h1>🎓 Portal Administrasi & Pembelajaran Guru</h1>
-        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} | <b>{kelas_aktif}</b> ({tahun} - Semester {semester})</p>
+        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} | Mapel: <b>{mapel_aktif}</b> | <b>{kelas_aktif}</b> ({tahun} - Semester {semester})</p>
     </div>
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs([
     "📑 Generator Modul Ajar", 
-    f"📋 Buku Presensi ({kelas_aktif})", 
-    f"📊 Buku Nilai & KKTP ({kelas_aktif})"
+    f"📋 Buku Presensi ({mapel_aktif} - {kelas_aktif})", 
+    f"📊 Buku Nilai & KKTP ({mapel_aktif} - {kelas_aktif})"
 ])
 
 # ------------------------------------------
@@ -235,12 +278,13 @@ with tab1:
         with st.container(border=True):
             st.markdown("**📖 Materi & Kurikulum**")
             if not DATABASE_MATERI:
-                mapel_selected = st.selectbox("Mata Pelajaran", ["Ilmu Pengetahuan Sosial (IPS)", "Pendidikan Pancasila (PPKn)"])
+                mapel_selected = st.selectbox("Mata Pelajaran Modul", ["Pendidikan Pancasila (PPKn)", "Ilmu Pengetahuan Sosial (IPS)"], index=0 if mapel_aktif=="PPKn" else 1)
                 kelas_selected = st.selectbox("Jenjang Kelas Modul", ["Kelas VII", "Kelas VIII", "Kelas IX"])
                 bab_selected = st.text_input("Bab / Tema Utama", "Bab 1: Kondisi Geografis dan Pelestarian SDA")
                 subbab_selected = st.text_input("Sub-Materi / Subbab", "Peran Lembaga Sosial dalam Pemanfaatan SDA dan SDM")
             else:
-                mapel_selected = st.selectbox("Mata Pelajaran", list(DATABASE_MATERI.keys()))
+                default_mapel_idx = 0 if mapel_aktif == "PPKn" else 1
+                mapel_selected = st.selectbox("Mata Pelajaran Modul", list(DATABASE_MATERI.keys()), index=min(default_mapel_idx, len(DATABASE_MATERI)-1))
                 kelas_selected = st.selectbox("Jenjang Kelas Modul", list(DATABASE_MATERI[mapel_selected].keys()))
                 bab_dict = DATABASE_MATERI[mapel_selected][kelas_selected]
                 bab_selected = st.selectbox("Bab / Tema Utama", list(bab_dict.keys()))
@@ -286,7 +330,6 @@ with tab1:
     def generate_custom_modul_doc(sekolah, penyusun, mapel, kelas, fase, semester, tahun, bab, subbab, alokasi, model, metode, lkpd_choice):
         doc = Document()
         
-        # Title
         p_title = doc.add_paragraph()
         run_title = p_title.add_run("MODUL AJAR KURIKULUM MERDEKA\n")
         run_title.bold = True
@@ -461,16 +504,20 @@ with tab1:
 # TAB 2: BUKU PRESENSI
 # ------------------------------------------
 with tab2:
-    st.subheader(f"📖 Buku Presensi Harian ({kelas_aktif})")
+    st.subheader(f"📖 Buku Presensi Harian ({mapel_aktif} - {kelas_aktif})")
     bulan_presensi = st.selectbox(
         "Pilih Bulan Presensi",
         ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
         index=8,
-        key=f"bln_{kelas_aktif}"
+        key=f"bln_{mapel_aktif}_{kelas_aktif}"
     )
 
     df_p_curr = st.session_state[key_p].copy()
+    
     tgl_cols = [str(t) for t in range(1, 32)]
+    for col in tgl_cols:
+        if col not in df_p_curr.columns:
+            df_p_curr[col] = ""
 
     col_config_p = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
@@ -497,20 +544,21 @@ with tab2:
         disabled=["No", "Nama", "Jenis Kelamin", "H", "S", "I", "A"],
         hide_index=True,
         use_container_width=True,
-        key=f"editor_p_{kelas_aktif}"
+        key=f"editor_p_{mapel_aktif}_{kelas_aktif}"
     )
     
-    st.session_state[key_p] = edited_p[DF_SISWA_AKTIF.columns.tolist() + tgl_cols]
+    cols_to_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_p.columns] + tgl_cols
+    st.session_state[key_p] = edited_p[cols_to_keep]
 
-    if st.button(f"💾 Simpan Presensi {kelas_aktif} ke Google Sheets", type="primary"):
-        if save_data_to_sheet(f"Presensi_{kelas_aktif}", edited_p):
-            st.success("✅ Data Presensi Berhasil Disimpan Permanen ke Google Sheets!")
+    if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ke Google Sheets", type="primary"):
+        if save_data_to_sheet(sheet_p_name, edited_p):
+            st.success(f"✅ Data Presensi Mapel {mapel_aktif} Berhasil Disimpan Permanen ke Sheet {sheet_p_name}!")
 
 # ------------------------------------------
 # TAB 3: BUKU NILAI & KKTP
 # ------------------------------------------
 with tab3:
-    st.subheader(f"📊 Buku Nilai & Akumulasi Realtime ({kelas_aktif})")
+    st.subheader(f"📊 Buku Nilai & Akumulasi Realtime ({mapel_aktif} - {kelas_aktif})")
     
     with st.expander("📌 Pengaturan Kategori/Jenis Penilaian per Kolom", expanded=True):
         st.write("Silakan tentukan jenis penilaian untuk masing-masing kolom di bawah ini:")
@@ -523,7 +571,7 @@ with tab3:
                     f"Kolom Nilai {i}",
                     options=KATEGORI_NILAI_OPSI,
                     index=0 if i <= 10 else 1,
-                    key=f"kat_n_{kelas_aktif}_{i}"
+                    key=f"kat_n_{mapel_aktif}_{kelas_aktif}_{i}"
                 )
 
     df_nilai_current = st.session_state[key_n].copy()
@@ -535,8 +583,9 @@ with tab3:
     }
     
     kolom_nilai_keys = [f"Nilai {i}" for i in range(1, JUMLAH_KOLOM_NILAI + 1)]
-    
     for k in kolom_nilai_keys:
+        if k not in df_nilai_current.columns:
+            df_nilai_current[k] = None
         label_kat = kategori_terpilih[k]
         column_config_n[k] = st.column_config.NumberColumn(
             f"{k} ({label_kat})",
@@ -559,12 +608,13 @@ with tab3:
         disabled=["No", "Nama", "Jenis Kelamin", "📊 Nilai Akhir"],
         hide_index=True,
         use_container_width=True,
-        key=f"editor_n_{kelas_aktif}"
+        key=f"editor_n_{mapel_aktif}_{kelas_aktif}"
     )
     
-    st.session_state[key_n] = edited_n[DF_SISWA_AKTIF.columns.tolist() + kolom_nilai_keys]
+    cols_n_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_n.columns] + kolom_nilai_keys
+    st.session_state[key_n] = edited_n[cols_n_keep]
 
     st.markdown("---")
-    if st.button(f"💾 Simpan Buku Nilai {kelas_aktif} ke Google Sheets", type="primary"):
-        if save_data_to_sheet(f"Nilai_{kelas_aktif}", edited_n):
-            st.success("✅ Data Buku Nilai Berhasil Disimpan Permanen ke Google Sheets!")
+    if st.button(f"💾 Simpan Buku Nilai {mapel_aktif} {kelas_aktif} ke Google Sheets", type="primary"):
+        if save_data_to_sheet(sheet_n_name, edited_n):
+            st.success(f"✅ Data Buku Nilai Mapel {mapel_aktif} Berhasil Disimpan Permanen ke Sheet {sheet_n_name}!")
