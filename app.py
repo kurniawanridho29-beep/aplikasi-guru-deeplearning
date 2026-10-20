@@ -196,7 +196,7 @@ def get_jadwal_tanggal(mapel, kelas, bulan_nama, tahun_str):
     return list_tgl if list_tgl else ["Sesi 1", "Sesi 2", "Sesi 3", "Sesi 4"]
 
 # ==========================================
-# 5. SIDEBAR PANEL (TERMASUK BULAN)
+# 5. SIDEBAR PANEL
 # ==========================================
 with st.sidebar:
     st.markdown("### 👨‍🏫 Identitas Pengajar")
@@ -293,7 +293,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # ------------------------------------------
-# TAB 1: GENERATOR MODUL AJAR (DEEP LEARNING)
+# TAB 1: GENERATOR MODUL AJAR
 # ------------------------------------------
 with tab1:
     st.subheader("⚙️ Konfigurasi Modul Ajar Kurikulum Merdeka (Deep Learning)")
@@ -560,7 +560,6 @@ with tab2:
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
     
-    # Menghubungkan dropdown H, S, I, A ke setiap sel tanggal
     for t in TANGGAL_JADWAL:
         col_config_p[t] = st.column_config.SelectboxColumn(
             label=t,
@@ -601,10 +600,7 @@ with tab2:
         skor_s = (df_upper == "S").sum(axis=1) * 60.0
         skor_i = (df_upper == "I").sum(axis=1) * 60.0
         
-        # Kalkulasi Nilai Kehadiran Penunjang Maksimal 75
         nilai_presensi_calc = ((skor_h + skor_s + skor_i) / total_pertemuan).round(1)
-        
-        # Masukkan otomatis ke Kolom Nilai 1 (Nilai Kehadiran Penunjang) pada Buku Nilai Mapel & Kelas Aktif
         st.session_state[key_n]["Nilai 1"] = nilai_presensi_calc
 
     if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ({bulan_aktif}) ke Google Sheets", type="primary"):
@@ -662,17 +658,30 @@ with tab3:
             disabled=is_disabled
         )
     
-    df_numeric = df_nilai_current[kolom_nilai_keys].apply(pd.to_numeric, errors='coerce')
-    df_nilai_current["📊 Nilai Akhir"] = df_numeric.mean(axis=1).round(2)
+    # 1. Hitung Rata-Rata Murni Akademik (Hanya Nilai 2 s.d. Nilai 15)
+    kolom_tugas_keys = [f"Nilai {i}" for i in range(2, JUMLAH_KOLOM_NILAI + 1)]
+    df_numeric_tugas = df_nilai_current[kolom_tugas_keys].apply(pd.to_numeric, errors='coerce')
+    df_nilai_current["📚 Rata Akademik"] = df_numeric_tugas.mean(axis=1).round(2)
     
+    # 2. Hitung Nilai Akhir Penunjang (80% Akademik + 20% Kehadiran Penunjang)
+    nilai_presensi_num = pd.to_numeric(df_nilai_current["Nilai 1"], errors='coerce').fillna(0)
+    nilai_akademik_num = df_nilai_current["📚 Rata Akademik"].fillna(0)
+    
+    df_nilai_current["📊 Nilai Akhir"] = (
+        (nilai_akademik_num * 0.8) + (nilai_presensi_num * 0.2)
+    ).round(2)
+
+    column_config_n["📚 Rata Akademik"] = st.column_config.NumberColumn(
+        "📚 Rata Akademik", disabled=True, format="%.2f", width="medium"
+    )
     column_config_n["📊 Nilai Akhir"] = st.column_config.NumberColumn(
-        "📊 Nilai Akhir", disabled=True, format="%.2f", width="medium"
+        "📊 Nilai Akhir (Penunjang)", disabled=True, format="%.2f", width="medium"
     )
 
     edited_n = st.data_editor(
         df_nilai_current,
         column_config=column_config_n,
-        disabled=["No", "Nama", "Jenis Kelamin", "Nilai 1", "📊 Nilai Akhir"],
+        disabled=["No", "Nama", "Jenis Kelamin", "Nilai 1", "📚 Rata Akademik", "📊 Nilai Akhir"],
         hide_index=True,
         use_container_width=True,
         key=f"editor_n_{mapel_aktif}_{kelas_aktif}"
