@@ -190,7 +190,6 @@ def get_jadwal_tanggal(mapel, kelas, bulan_nama, tahun_str):
     for day_obj in cal.itermonthdates(tahun_val, bulan_num):
         if day_obj.month == bulan_num and day_obj.weekday() in hari_target:
             nama_hari = HARI_SINGKAT[day_obj.weekday()]
-            # Dibuat singkat contoh: "Sel, 06" agar muat di header tabel
             tgl_formatted = f"{nama_hari}, {day_obj.day:02d}"
             list_tgl.append(tgl_formatted)
             
@@ -210,7 +209,6 @@ with st.sidebar:
     mapel_aktif = st.selectbox("Pilih Mata Pelajaran", ["PPKn", "IPS"])
     kelas_aktif = st.selectbox("Pilih Kelas Aktif", ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"], index=1)
     
-    # OPSI BULAN DI SIDEBAR KIRI
     bulan_aktif = st.selectbox(
         "Pilih Bulan Presensi",
         DAFTAR_BULAN,
@@ -595,16 +593,18 @@ with tab2:
     cols_to_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_p.columns] + TANGGAL_JADWAL
     st.session_state[key_p] = edited_p[cols_to_keep]
 
-    # --- SINKRONISASI OTOMATIS NILAI PRESENSI KE BUKU NILAI ---
-    # Skor: Hadir = 100, Sakit/Izin = 80, Alpa/Kosong = 0
+    # --- SINKRONISASI OTOMATIS NILAI PRESENSI KE BUKU NILAI (MAX 75 / PAS KKM) ---
     total_pertemuan = len(TANGGAL_JADWAL)
     if total_pertemuan > 0:
-        skor_h = (df_upper == "H").sum(axis=1) * 100
-        skor_s = (df_upper == "S").sum(axis=1) * 80
-        skor_i = (df_upper == "I").sum(axis=1) * 80
+        # Bobot: Hadir (H) = 75.0 (Pas KKM), Sakit/Izin (S/I) = 60.0, Alpa/Kosong = 0.0
+        skor_h = (df_upper == "H").sum(axis=1) * 75.0
+        skor_s = (df_upper == "S").sum(axis=1) * 60.0
+        skor_i = (df_upper == "I").sum(axis=1) * 60.0
+        
+        # Kalkulasi Nilai Kehadiran Penunjang Maksimal 75
         nilai_presensi_calc = ((skor_h + skor_s + skor_i) / total_pertemuan).round(1)
         
-        # Masukkan otomatis ke Kolom Nilai 1 Buku Nilai
+        # Masukkan otomatis ke Kolom Nilai 1 (Nilai Kehadiran Penunjang) pada Buku Nilai Mapel & Kelas Aktif
         st.session_state[key_n]["Nilai 1"] = nilai_presensi_calc
 
     if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ({bulan_aktif}) ke Google Sheets", type="primary"):
