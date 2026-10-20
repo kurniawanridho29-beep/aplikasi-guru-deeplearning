@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import calendar
+from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
 from docx import Document
@@ -86,7 +88,6 @@ def save_data_to_sheet(sheet_name, df):
                 worksheet = sh.add_worksheet(title=sheet_name, rows="100", cols="40")
             
             worksheet.clear()
-            # PERBAIKAN ERROR FLOAT64: Konversi tipe data ke object sebelum fillna("")
             df_to_save = df.astype(object).fillna("")
             worksheet.update([df_to_save.columns.values.tolist()] + df_to_save.values.tolist())
             return True
@@ -96,7 +97,7 @@ def save_data_to_sheet(sheet_name, df):
     return False
 
 # ==========================================
-# 3. DATASET SISWA & HELPER (CSV & FALLBACK)
+# 3. DATASET SISWA & HELPER CSV
 # ==========================================
 DUMMY_SISWA = {
     "Kelas 7A": [
@@ -152,7 +153,48 @@ def get_data_siswa(kelas_nama):
 DATABASE_MATERI = load_materi_json()
 
 # ==========================================
-# 4. SIDEBAR PANEL
+# 4. PEMETAAN JADWAL MENGAJAR & KALENDER DINAMIS
+# ==========================================
+JADWAL_GURU = {
+    ("PPKn", "Kelas 7A"): [0], # Senin
+    ("IPS", "Kelas 7A"): [3],  # Kamis
+    ("PPKn", "Kelas 7B"): [1], # Selasa
+    ("IPS", "Kelas 7B"): [2],  # Rabu
+    ("PPKn", "Kelas 8"): [3],  # Kamis
+    ("IPS", "Kelas 8"): [1],   # Selasa
+    ("PPKn", "Kelas 9"): [4],  # Jumat
+    ("IPS", "Kelas 9"): [0],   # Senin
+}
+
+BULAN_MAP = {
+    "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
+    "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+}
+
+HARI_INDO = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+
+def get_jadwal_tanggal(mapel, kelas, bulan_nama, tahun_str):
+    try:
+        tahun_val = int(tahun_str.split("/")[0])
+    except Exception:
+        tahun_val = 2026
+        
+    bulan_num = BULAN_MAP.get(bulan_nama, 10)
+    hari_target = JADWAL_GURU.get((mapel, kelas), [0, 1, 2, 3, 4])
+    
+    cal = calendar.Calendar()
+    list_tgl = []
+    
+    for day_obj in cal.itermonthdates(tahun_val, bulan_num):
+        if day_obj.month == bulan_num and day_obj.weekday() in hari_target:
+            nama_hari = HARI_INDO[day_obj.weekday()]
+            tgl_formatted = f"{nama_hari}, {day_obj.day:02d}"
+            list_tgl.append(tgl_formatted)
+            
+    return list_tgl if list_tgl else ["Sesi 1", "Sesi 2", "Sesi 3", "Sesi 4"]
+
+# ==========================================
+# 5. SIDEBAR PANEL
 # ==========================================
 with st.sidebar:
     st.markdown("### 👨‍🏫 Identitas Pengajar")
@@ -162,15 +204,13 @@ with st.sidebar:
     st.divider()
     st.markdown("### 🏫 Pengaturan Kelas & Mapel")
     
-    mapel_aktif = st.selectbox(
-        "Pilih Mata Pelajaran",
-        ["PPKn", "IPS"]
-    )
+    mapel_aktif = st.selectbox("Pilih Mata Pelajaran", ["PPKn", "IPS"])
+    kelas_aktif = st.selectbox("Pilih Kelas Aktif", ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"], index=1)
     
-    kelas_aktif = st.selectbox(
-        "Pilih Kelas Aktif",
-        ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"],
-        index=1
+    bulan_aktif = st.selectbox(
+        "Pilih Bulan Presensi",
+        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        index=9
     )
     tahun = st.text_input("Tahun Pelajaran", "2026/2027")
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
@@ -184,62 +224,47 @@ with st.sidebar:
 DF_SISWA_AKTIF = get_data_siswa(kelas_aktif)
 JUMLAH_KOLOM_NILAI = 15
 KATEGORI_NILAI_OPSI = [
-    "Tugas Individu", "Tugas Kelompok", "Projek / Praktik", "UTS / Mid Semester", "UAS / Akhir Semester"
+    "Nilai Kehadiran (Otomatis)", "Tugas Individu", "Tugas Kelompok", "Projek / Praktik", "UTS / Mid Semester", "UAS / Akhir Semester"
 ]
 
 # ==========================================
-# 5. SINKRONISASI DATA LAMA KE MAPEL TERPISAH
+# 6. SINKRONISASI DATA SESSION STATE & GOOGLE SHEETS
 # ==========================================
-key_p = f"presensi_{mapel_aktif}_{kelas_aktif}"
+tahun_clean = tahun.replace("/", "_")
+key_p = f"presensi_{mapel_aktif}_{kelas_aktif}_{bulan_aktif}_{tahun_clean}"
 key_n = f"nilai_{mapel_aktif}_{kelas_aktif}"
 
-sheet_p_name = f"Presensi_{mapel_aktif}_{kelas_aktif}"
+sheet_p_name = f"Presensi_{mapel_aktif}_{kelas_aktif}_{bulan_aktif}"
 sheet_n_name = f"Nilai_{mapel_aktif}_{kelas_aktif}"
 
-sheet_p_old = f"Presensi_{kelas_aktif}"
-sheet_n_old = f"Nilai_{kelas_aktif}"
+TANGGAL_JADWAL = get_jadwal_tanggal(mapel_aktif, kelas_aktif, bulan_aktif, tahun)
 
-# --- PEMUATAN DATA PRESENSI ---
+# --- PRESENSI DINAMIS ---
 if key_p not in st.session_state:
     df_cloud_p = load_data_from_sheet(sheet_p_name)
-    
     if df_cloud_p is None or df_cloud_p.empty:
-        df_old_p = load_data_from_sheet(sheet_p_old)
+        df_old_p = load_data_from_sheet(f"Presensi_{kelas_aktif}")
         if df_old_p is not None and not df_old_p.empty:
             df_cloud_p = df_old_p.copy()
-            tgl_cols = [str(t) for t in range(1, 32)]
-            for t in tgl_cols:
-                if t in df_cloud_p.columns:
-                    if kelas_aktif == "Kelas 7A" and mapel_aktif == "IPS" and t == "7":
-                        df_cloud_p[t] = ""
-                    elif kelas_aktif == "Kelas 7B" and mapel_aktif == "PPKn" and t == "9":
-                        df_cloud_p[t] = ""
-                    elif kelas_aktif == "Kelas 7B" and mapel_aktif == "IPS" and t == "8":
-                        df_cloud_p[t] = ""
-                    elif kelas_aktif == "Kelas 8" and mapel_aktif == "IPS" and t == "8":
-                        df_cloud_p[t] = ""
-                    elif kelas_aktif == "Kelas 9" and mapel_aktif == "PPKn" and t == "7":
-                        df_cloud_p[t] = ""
 
     if df_cloud_p is not None and not df_cloud_p.empty:
+        for t in TANGGAL_JADWAL:
+            if t not in df_cloud_p.columns:
+                df_cloud_p[t] = ""
         st.session_state[key_p] = df_cloud_p
     else:
         df_p = DF_SISWA_AKTIF.copy()
-        for t in range(1, 32):
-            df_p[str(t)] = ""
+        for t in TANGGAL_JADWAL:
+            df_p[t] = ""
         st.session_state[key_p] = df_p
 
-# --- PEMUATAN DATA BUKU NILAI ---
+# --- BUKU NILAI ---
 if key_n not in st.session_state:
     df_cloud_n = load_data_from_sheet(sheet_n_name)
-    
     if df_cloud_n is None or df_cloud_n.empty:
-        df_old_n = load_data_from_sheet(sheet_n_old)
+        df_old_n = load_data_from_sheet(f"Nilai_{kelas_aktif}")
         if df_old_n is not None and not df_old_n.empty:
-            if kelas_aktif == "Kelas 7A" and mapel_aktif == "PPKn":
-                df_cloud_n = df_old_n.copy()
-            elif kelas_aktif != "Kelas 7A":
-                df_cloud_n = df_old_n.copy()
+            df_cloud_n = df_old_n.copy()
 
     if df_cloud_n is not None and not df_cloud_n.empty:
         st.session_state[key_n] = df_cloud_n
@@ -250,18 +275,18 @@ if key_n not in st.session_state:
         st.session_state[key_n] = df_n
 
 # ==========================================
-# 6. HEADER BANNER
+# 7. HEADER BANNER
 # ==========================================
 st.markdown(f"""
     <div class="header-box">
         <h1>🎓 Portal Administrasi & Pembelajaran Guru</h1>
-        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} | Mapel: <b>{mapel_aktif}</b> | <b>{kelas_aktif}</b> ({tahun} - Semester {semester})</p>
+        <p>Selamat datang, <b>{penyusun}</b> | {sekolah} | Mapel: <b>{mapel_aktif}</b> | <b>{kelas_aktif}</b> ({bulan_aktif} {tahun} - Semester {semester})</p>
     </div>
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs([
     "📑 Generator Modul Ajar", 
-    f"📋 Buku Presensi ({mapel_aktif} - {kelas_aktif})", 
+    f"📋 Presensi ({mapel_aktif} - {kelas_aktif} - {bulan_aktif})", 
     f"📊 Buku Nilai & KKTP ({mapel_aktif} - {kelas_aktif})"
 ])
 
@@ -325,14 +350,12 @@ with tab1:
 
     def generate_custom_modul_doc(sekolah, penyusun, mapel, kelas, fase, semester, tahun, bab, subbab, alokasi, model, metode, lkpd_choice):
         doc = Document()
-        
         p_title = doc.add_paragraph()
         run_title = p_title.add_run("MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING)\n")
         run_title.bold = True
         p_title.add_run(f"MATA PELAJARAN: {mapel.upper()}\nSTANDAR KEPUTUSAN BSKAP NOMOR 046/H/KR/2025").bold = True
 
         doc.add_heading("I. INFORMASI UMUM", level=1)
-        
         doc.add_heading("IDENTITAS MODUL", level=2)
         p_id = doc.add_paragraph()
         p_id.add_run(f"Nama Sekolah: {sekolah}\n")
@@ -369,7 +392,6 @@ with tab1:
         p_tp_d.add_run(f"• Karakteristik LKPD: {lkpd_choice}")
 
         doc.add_heading("II. KOMPONEN INTI", level=1)
-        
         doc.add_heading("TUJUAN PEMBELAJARAN (TP)", level=2)
         p_tp = doc.add_paragraph()
         p_tp.add_run(f"1. Peserta didik dapat menganalisis secara mendalam konsep {subbab}.\n")
@@ -386,7 +408,6 @@ with tab1:
         p_pp.add_run(f"2. Apa dampak yang paling terasa jika masalah pada {bab} tidak segera diselesaikan secara bijak?")
 
         doc.add_heading("III. KEGIATAN PEMBELAJARAN DETAIL", level=1)
-        
         doc.add_heading("PENDAHULUAN (15 MENIT) - Mindful Start & Orientasi", level=2)
         p_pen = doc.add_paragraph()
         p_pen.add_run("• Orientasi Kelas: Guru menyapa peserta didik, memimpin doa, dan memeriksa kehadiran.\n")
@@ -410,7 +431,7 @@ with tab1:
             p_inti.add_run(f"1. Eksplorasi Konteks Lingkungan (~10 Menit):\n   Siswa mengamati fenomena nyata seputar {subbab} yang relevan dengan kehidupan sehari-hari.\n\n")
             p_inti.add_run(f"2. Merumuskan Hipotesis & Pertanyaan (~5 Menit):\n   Siswa mencatat poin penting dan pertanyaan investigatif pada {lkpd_choice}.\n\n")
             p_inti.add_run(f"3. Analisis & Pembuktian ({metode}) (~20 Menit):\n   Siswa mengumpulkan bukti empiris dan memverifikasi keterkaitan teori dengan realita di lapangan.\n\n")
-            p_inti.add_run(f"4. Komunikasi & Generalisasi (~15 Menit):\n   Siswa menyimpulan prinsip dasar materi berdasarkan bukti-bukti yang telah dianalisis.")
+            p_inti.add_run(f"4. Komunikasi & Generalisasi (~15 Menit):\n   Siswa menyimpulkan prinsip dasar materi berdasarkan bukti-bukti yang telah dianalisis.")
 
         doc.add_heading("PENUTUP (15 MENIT) - Refleksi Metakognisi", level=2)
         p_penutup = doc.add_paragraph()
@@ -425,7 +446,6 @@ with tab1:
         p_as.add_run(f"• Asesmen Sumatif: Laporan Akhir & Hasil Pengisian {lkpd_choice}.")
 
         doc.add_heading("V. LAMPIRAN: LEMBAR KERJA PESERTA DIDIK (LKPD DEEP LEARNING)", level=1)
-        
         doc.add_heading(f"LEMBAR KERJA PESERTA DIDIK: {lkpd_choice.upper()}", level=2)
         p_lkpd = doc.add_paragraph()
         p_lkpd.add_run(f"Nama Kelompok : ....................................\nKelas : {kelas}\nAnggota Kelompok : 1. ..... 2. ..... 3. ..... 4. .....\n\n")
@@ -433,7 +453,6 @@ with tab1:
         if "Investigasi" in lkpd_choice:
             p_lkpd.add_run("BAGIAN 1: TEKS KASUS & ANALISIS MASALAH KONTEKSTUAL\nBacalah kasus mengenai isu sosial/masyarakat di bawah ini, kemudian identifikasi akar masalahnya!\n\n").bold = True
             p_lkpd.add_run("[ RUANG TEKS KASUS ATAU BERITA ]\n\n")
-            
             p_lkpd.add_run("BAGIAN 2: TABEL ANALISIS AKAR MASALAH DAN SOLUSI\n").bold = True
             table_m = doc.add_table(rows=4, cols=4)
             table_m.style = 'Table Grid'
@@ -444,13 +463,10 @@ with tab1:
             hdr[3].text = 'Alternatif Solusi'
             for i in range(1, 4):
                 table_m.rows[i].cells[0].text = str(i)
-            
             p_lkpd.add_run("\nBAGIAN 3: JUSTIFIKASI ARGUMEN KELOMPOK\nJelaskan alasan logis mengapa solusi yang kelompok kalian pilih adalah yang paling tepat:\nJawaban: ....................................................................................................................................................................................................................................................................................").bold = True
-            
         elif "Proyek" in lkpd_choice:
             p_lkpd.add_run("BAGIAN 1: PERANCANGAN PROYEK (PERENCANAAN)\n").bold = True
             p_lkpd.add_run(f"Judul Proyek / Produk : .....\nTarget Sasaran Proyek : .....\nAlasan Pemilihan Proyek : ....................................................................................\n\n")
-            
             p_lkpd.add_run("BAGIAN 2: LOGBOOK / JURNAL KONTROL KEGIATAN PROYEK\n").bold = True
             table_p = doc.add_table(rows=4, cols=4)
             table_p.style = 'Table Grid'
@@ -459,20 +475,16 @@ with tab1:
             hdr[1].text = 'Rencana Kegiatan'
             hdr[2].text = 'Penanggung Jawab'
             hdr[3].text = 'Status / Progres'
-            
             table_p.rows[1].cells[0].text = 'Persiapan'
             table_p.rows[2].cells[0].text = 'Pelaksanaan'
             table_p.rows[3].cells[0].text = 'Finishing'
-
             p_lkpd.add_run("\nBAGIAN 3: EVALUASI HASIL KARYA PROYEK\nTuliskan kendala utama yang dihadapi saat pembuatan proyek dan bagaimana cara mengatasinya:\nJawaban: ....................................................................................................................................................................................................................................................................................").bold = True
-
         else:
             p_lkpd.add_run("BAGIAN 1: PENALARAN ARGUMENTATIF KONTEKSTUAL\n").bold = True
             p_lkpd.add_run(f"Berdasarkan topik {subbab}, kemukakan pendapat kelompokmu mengenai kondisi di bawah ini dan sertakan alasan logisnya!\n")
             p_lkpd.add_run("Pernyataan Diskusi : ....................................................................................\n")
             p_lkpd.add_run("Pendapat Kelompok  : [ Setuju / Tidak Setuju ]\n")
             p_lkpd.add_run("Alasan Justifikasi : ....................................................................................................................................................................................................................................................................................\n\n")
-            
             p_lkpd.add_run("BAGIAN 2: PERTANYAAN METAKOGNISI (REFLEKSI DIRI)\n").bold = True
             p_lkpd.add_run("1. Satu hal paling penting dan berharga yang saya pelajari hari ini adalah:\n   Jawaban: ....................................................................................................\n")
             p_lkpd.add_run("2. Bagian materi mana yang menurut saya masih menantang dan perlu dipelajari lebih lanjut?\n   Jawaban: ....................................................................................................\n")
@@ -526,21 +538,15 @@ with tab1:
     )
 
 # ------------------------------------------
-# TAB 2: BUKU PRESENSI
+# TAB 2: BUKU PRESENSI DINAMIS
 # ------------------------------------------
 with tab2:
-    st.subheader(f"📖 Buku Presensi Harian ({mapel_aktif} - {kelas_aktif})")
-    bulan_presensi = st.selectbox(
-        "Pilih Bulan Presensi",
-        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
-        index=8,
-        key=f"bln_{mapel_aktif}_{kelas_aktif}"
-    )
+    st.subheader(f"📖 Buku Presensi Harian ({mapel_aktif} - {kelas_aktif} - Bulan {bulan_aktif})")
+    st.caption(f"🗓️ Kolom tanggal di bawah otomatis disesuaikan dengan Jadwal KBM {mapel_aktif} di {kelas_aktif}.")
 
     df_p_curr = st.session_state[key_p].copy()
     
-    tgl_cols = [str(t) for t in range(1, 32)]
-    for col in tgl_cols:
+    for col in TANGGAL_JADWAL:
         if col not in df_p_curr.columns:
             df_p_curr[col] = ""
 
@@ -549,10 +555,11 @@ with tab2:
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="medium"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
-    for t in tgl_cols:
+    for t in TANGGAL_JADWAL:
         col_config_p[t] = st.column_config.TextColumn(t, width="small")
 
-    df_upper = df_p_curr[tgl_cols].fillna("").apply(lambda x: x.astype(str).str.upper())
+    # Hitung Rekap
+    df_upper = df_p_curr[TANGGAL_JADWAL].fillna("").apply(lambda x: x.astype(str).str.upper())
     df_p_curr["H"] = (df_upper == "H").sum(axis=1)
     df_p_curr["S"] = (df_upper == "S").sum(axis=1)
     df_p_curr["I"] = (df_upper == "I").sum(axis=1)
@@ -569,15 +576,29 @@ with tab2:
         disabled=["No", "Nama", "Jenis Kelamin", "H", "S", "I", "A"],
         hide_index=True,
         use_container_width=True,
-        key=f"editor_p_{mapel_aktif}_{kelas_aktif}"
+        key=f"editor_p_{mapel_aktif}_{kelas_aktif}_{bulan_aktif}"
     )
     
-    cols_to_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_p.columns] + tgl_cols
+    cols_to_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_p.columns] + TANGGAL_JADWAL
     st.session_state[key_p] = edited_p[cols_to_keep]
 
-    if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ke Google Sheets", type="primary"):
+    # --- SINKRONISASI OTOMATIS NILAI PRESENSI KE BUKU NILAI ---
+    # Hitung skor: Hadir = 100, Sakit/Izin = 80, Alpa/Kosong = 0
+    total_pertemuan = len(TANGGAL_JADWAL)
+    if total_pertemuan > 0:
+        skor_h = (df_upper == "H").sum(axis=1) * 100
+        skor_s = (df_upper == "S").sum(axis=1) * 80
+        skor_i = (df_upper == "I").sum(axis=1) * 80
+        nilai_presensi_calc = ((skor_h + skor_s + skor_i) / total_pertemuan).round(1)
+        
+        # Masukkan otomatis ke Nilai 1 Buku Nilai
+        st.session_state[key_n]["Nilai 1"] = nilai_presensi_calc
+
+    if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ({bulan_aktif}) ke Google Sheets", type="primary"):
         if save_data_to_sheet(sheet_p_name, edited_p):
-            st.success(f"✅ Data Presensi Mapel {mapel_aktif} Berhasil Disimpan Permanen ke Sheet {sheet_p_name}!")
+            # Juga otomatis update Buku Nilai saat Presensi disimpan
+            save_data_to_sheet(sheet_n_name, st.session_state[key_n])
+            st.success(f"✅ Presensi & Nilai Kehadiran Bulan {bulan_aktif} Berhasil Disimpan & Dihitung Otomatis!")
 
 # ------------------------------------------
 # TAB 3: BUKU NILAI & KKTP
@@ -589,12 +610,18 @@ with tab3:
         st.write("Silakan tentukan jenis penilaian untuk masing-masing kolom di bawah ini:")
         cols_kat = st.columns(5)
         kategori_terpilih = {}
-        for i in range(1, JUMLAH_KOLOM_NILAI + 1):
+        
+        # Kolom 1 Dikunci Khusus Nilai Kehadiran Otomatis
+        kategori_terpilih["Nilai 1"] = "Nilai Kehadiran (Otomatis)"
+        with cols_kat[0]:
+            st.text_input("Kolom Nilai 1", "Nilai Kehadiran (Otomatis)", disabled=True, key=f"kat_n_1_dis_{mapel_aktif}_{kelas_aktif}")
+            
+        for i in range(2, JUMLAH_KOLOM_NILAI + 1):
             col_idx = (i - 1) % 5
             with cols_kat[col_idx]:
                 kategori_terpilih[f"Nilai {i}"] = st.selectbox(
                     f"Kolom Nilai {i}",
-                    options=KATEGORI_NILAI_OPSI,
+                    options=KATEGORI_NILAI_OPSI[1:],
                     index=0 if i <= 10 else 1,
                     key=f"kat_n_{mapel_aktif}_{kelas_aktif}_{i}"
                 )
@@ -612,12 +639,16 @@ with tab3:
         if k not in df_nilai_current.columns:
             df_nilai_current[k] = None
         label_kat = kategori_terpilih[k]
+        
+        # Kunci Kolom Nilai 1 agar tidak bisa diedit manual
+        is_disabled = True if k == "Nilai 1" else False
         column_config_n[k] = st.column_config.NumberColumn(
             f"{k} ({label_kat})",
             min_value=0.0,
             max_value=100.0,
             format="%.1f",
-            width="medium"
+            width="medium",
+            disabled=is_disabled
         )
     
     df_numeric = df_nilai_current[kolom_nilai_keys].apply(pd.to_numeric, errors='coerce')
@@ -630,7 +661,7 @@ with tab3:
     edited_n = st.data_editor(
         df_nilai_current,
         column_config=column_config_n,
-        disabled=["No", "Nama", "Jenis Kelamin", "📊 Nilai Akhir"],
+        disabled=["No", "Nama", "Jenis Kelamin", "Nilai 1", "📊 Nilai Akhir"],
         hide_index=True,
         use_container_width=True,
         key=f"editor_n_{mapel_aktif}_{kelas_aktif}"
