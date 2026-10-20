@@ -663,13 +663,16 @@ with tab3:
     df_numeric_tugas = df_nilai_current[kolom_tugas_keys].apply(pd.to_numeric, errors='coerce')
     df_nilai_current["📚 Rata Akademik"] = df_numeric_tugas.mean(axis=1).round(2)
     
-    # 2. Hitung Nilai Akhir Penunjang (80% Akademik + 20% Kehadiran Penunjang)
+    # 2. SISTEM POIN BONUS PENUNJANG: Presensi (Max 75) memberikan Bonus Kedisiplinan (+0 s.d. +7.5 Poin)
     nilai_presensi_num = pd.to_numeric(df_nilai_current["Nilai 1"], errors='coerce').fillna(0)
     nilai_akademik_num = df_nilai_current["📚 Rata Akademik"].fillna(0)
     
-    df_nilai_current["📊 Nilai Akhir"] = (
-        (nilai_akademik_num * 0.8) + (nilai_presensi_num * 0.2)
-    ).round(2)
+    # Bonus poin = 10% dari Nilai Presensi (Presensi 75 = +7.5 poin bonus penunjang)
+    poin_bonus_presensi = (nilai_presensi_num * 0.10).round(1)
+    
+    # Nilai Akhir = Nilai Akademik + Bonus Presensi (Di-clip maksimal 100.0)
+    nilai_akhir_calc = nilai_akademik_num + poin_bonus_presensi
+    df_nilai_current["📊 Nilai Akhir"] = nilai_akhir_calc.clip(upper=100.0).round(2)
 
     column_config_n["📚 Rata Akademik"] = st.column_config.NumberColumn(
         "📚 Rata Akademik", disabled=True, format="%.2f", width="medium"
