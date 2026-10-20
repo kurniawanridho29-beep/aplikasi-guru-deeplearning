@@ -107,8 +107,9 @@ DUMMY_SISWA = {
         "Yuda Agustian FitRoh", "Yulia Ramadhani", "Marveltus Hia", "Muhammad Rhaehan A"
     ],
     "Kelas 7B": [
-        "Ahmad Albar", "Bagas Saputra", "Citra Kirana", "Dedi Kurniawan", "Eka Putri",
-        "Fahri Hamzah", "Gita Gutawa", "Hafiz Ridho", "Indah Permata", "Joko Susilo"
+        "Aal- Bar", "Ahmad Rehan Zainudin", "Bela Anggraini Nurmalasari", "Durrotul Zahiya",
+        "Marhan", "Muhammmad Ardiansyah", "Muhammad Iqbal", "Muhammad Irfan Zaki",
+        "Muhammad Restu Adillah", "Nadiya Maulida Husna"
     ],
     "Kelas 8": [
         "Andi Wijaya", "Budi Santoso", "Cici Paramida", "Doni Monardo", "Eva Celia"
@@ -153,7 +154,7 @@ def get_data_siswa(kelas_nama):
 DATABASE_MATERI = load_materi_json()
 
 # ==========================================
-# 4. PEMETAAN JADWAL MENGAJAR & KALENDER DINAMIS
+# 4. JADWAL MENGAJAR & KALENDER DINAMIS
 # ==========================================
 JADWAL_GURU = {
     ("PPKn", "Kelas 7A"): [0], # Senin
@@ -166,12 +167,13 @@ JADWAL_GURU = {
     ("IPS", "Kelas 9"): [0],   # Senin
 }
 
-BULAN_MAP = {
-    "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
-    "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
-}
+DAFTAR_BULAN = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+]
 
-HARI_INDO = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+BULAN_MAP = {b: i+1 for i, b in enumerate(DAFTAR_BULAN)}
+HARI_SINGKAT = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Ming"]
 
 def get_jadwal_tanggal(mapel, kelas, bulan_nama, tahun_str):
     try:
@@ -187,14 +189,15 @@ def get_jadwal_tanggal(mapel, kelas, bulan_nama, tahun_str):
     
     for day_obj in cal.itermonthdates(tahun_val, bulan_num):
         if day_obj.month == bulan_num and day_obj.weekday() in hari_target:
-            nama_hari = HARI_INDO[day_obj.weekday()]
+            nama_hari = HARI_SINGKAT[day_obj.weekday()]
+            # Dibuat singkat contoh: "Sel, 06" agar muat di header tabel
             tgl_formatted = f"{nama_hari}, {day_obj.day:02d}"
             list_tgl.append(tgl_formatted)
             
     return list_tgl if list_tgl else ["Sesi 1", "Sesi 2", "Sesi 3", "Sesi 4"]
 
 # ==========================================
-# 5. SIDEBAR PANEL
+# 5. SIDEBAR PANEL (TERMASUK BULAN)
 # ==========================================
 with st.sidebar:
     st.markdown("### 👨‍🏫 Identitas Pengajar")
@@ -202,15 +205,16 @@ with st.sidebar:
     penyusun = st.text_input("Nama Guru / Penyusun", "Ridho Kurniawan, S.Pd.")
     
     st.divider()
-    st.markdown("### 🏫 Pengaturan Kelas & Mapel")
+    st.markdown("### 🏫 Pengaturan Kelas, Mapel & Bulan")
     
     mapel_aktif = st.selectbox("Pilih Mata Pelajaran", ["PPKn", "IPS"])
     kelas_aktif = st.selectbox("Pilih Kelas Aktif", ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"], index=1)
     
+    # OPSI BULAN DI SIDEBAR KIRI
     bulan_aktif = st.selectbox(
         "Pilih Bulan Presensi",
-        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
-        index=9
+        DAFTAR_BULAN,
+        index=9  # Default Oktober
     )
     tahun = st.text_input("Tahun Pelajaran", "2026/2027")
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
@@ -538,27 +542,36 @@ with tab1:
     )
 
 # ------------------------------------------
-# TAB 2: BUKU PRESENSI DINAMIS
+# TAB 2: BUKU PRESENSI DINAMIS & DROPDOWN SELECTBOX
 # ------------------------------------------
 with tab2:
     st.subheader(f"📖 Buku Presensi Harian ({mapel_aktif} - {kelas_aktif} - Bulan {bulan_aktif})")
-    st.caption(f"🗓️ Kolom tanggal di bawah otomatis disesuaikan dengan Jadwal KBM {mapel_aktif} di {kelas_aktif}.")
+    st.caption(f"🗓️ Kolom tanggal otomatis disesuaikan dengan Jadwal KBM {mapel_aktif} di {kelas_aktif} pada bulan {bulan_aktif}.")
 
     df_p_curr = st.session_state[key_p].copy()
     
+    # Menyiapkan kolom tanggal mengajar
     for col in TANGGAL_JADWAL:
         if col not in df_p_curr.columns:
             df_p_curr[col] = ""
 
+    # Konfigurasi kolom presensi dengan Dropdown Selectbox (H, S, I, A)
     col_config_p = {
         "No": st.column_config.NumberColumn("No", disabled=True, width="small"),
         "Nama": st.column_config.TextColumn("Nama Siswa", disabled=True, width="medium"),
         "Jenis Kelamin": st.column_config.TextColumn("JK", disabled=True, width="small"),
     }
+    
+    # Menghubungkan dropdown H, S, I, A ke setiap sel tanggal
     for t in TANGGAL_JADWAL:
-        col_config_p[t] = st.column_config.TextColumn(t, width="small")
+        col_config_p[t] = st.column_config.SelectboxColumn(
+            label=t,
+            options=["", "H", "S", "I", "A"],
+            required=False,
+            width="small"
+        )
 
-    # Hitung Rekap
+    # Hitung Rekapitulasi Kehadiran Realtime
     df_upper = df_p_curr[TANGGAL_JADWAL].fillna("").apply(lambda x: x.astype(str).str.upper())
     df_p_curr["H"] = (df_upper == "H").sum(axis=1)
     df_p_curr["S"] = (df_upper == "S").sum(axis=1)
@@ -583,7 +596,7 @@ with tab2:
     st.session_state[key_p] = edited_p[cols_to_keep]
 
     # --- SINKRONISASI OTOMATIS NILAI PRESENSI KE BUKU NILAI ---
-    # Hitung skor: Hadir = 100, Sakit/Izin = 80, Alpa/Kosong = 0
+    # Skor: Hadir = 100, Sakit/Izin = 80, Alpa/Kosong = 0
     total_pertemuan = len(TANGGAL_JADWAL)
     if total_pertemuan > 0:
         skor_h = (df_upper == "H").sum(axis=1) * 100
@@ -591,14 +604,13 @@ with tab2:
         skor_i = (df_upper == "I").sum(axis=1) * 80
         nilai_presensi_calc = ((skor_h + skor_s + skor_i) / total_pertemuan).round(1)
         
-        # Masukkan otomatis ke Nilai 1 Buku Nilai
+        # Masukkan otomatis ke Kolom Nilai 1 Buku Nilai
         st.session_state[key_n]["Nilai 1"] = nilai_presensi_calc
 
     if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ({bulan_aktif}) ke Google Sheets", type="primary"):
         if save_data_to_sheet(sheet_p_name, edited_p):
-            # Juga otomatis update Buku Nilai saat Presensi disimpan
             save_data_to_sheet(sheet_n_name, st.session_state[key_n])
-            st.success(f"✅ Presensi & Nilai Kehadiran Bulan {bulan_aktif} Berhasil Disimpan & Dihitung Otomatis!")
+            st.success(f"✅ Presensi & Nilai Kehadiran Otomatis Bulan {bulan_aktif} Berhasil Disimpan!")
 
 # ------------------------------------------
 # TAB 3: BUKU NILAI & KKTP
@@ -611,7 +623,7 @@ with tab3:
         cols_kat = st.columns(5)
         kategori_terpilih = {}
         
-        # Kolom 1 Dikunci Khusus Nilai Kehadiran Otomatis
+        # Kolom Nilai 1 dikunci khusus untuk Nilai Kehadiran Otomatis
         kategori_terpilih["Nilai 1"] = "Nilai Kehadiran (Otomatis)"
         with cols_kat[0]:
             st.text_input("Kolom Nilai 1", "Nilai Kehadiran (Otomatis)", disabled=True, key=f"kat_n_1_dis_{mapel_aktif}_{kelas_aktif}")
@@ -640,7 +652,6 @@ with tab3:
             df_nilai_current[k] = None
         label_kat = kategori_terpilih[k]
         
-        # Kunci Kolom Nilai 1 agar tidak bisa diedit manual
         is_disabled = True if k == "Nilai 1" else False
         column_config_n[k] = st.column_config.NumberColumn(
             f"{k} ({label_kat})",
