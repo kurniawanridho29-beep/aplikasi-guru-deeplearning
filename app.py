@@ -112,7 +112,14 @@ DUMMY_SISWA = {
         "Muhammad Restu Adillah", "Nadiya Maulida Husna"
     ],
     "Kelas 8": [
-        "Andi Wijaya", "Budi Santoso", "Cici Paramida", "Doni Monardo", "Eva Celia"
+        "Adiba Khazahra", "Ahmad Ovianto", "Ahmad Rifandi Praditya", "Alif Al Hambia",
+        "Andi Saputra Hia", "Anisa Rahmawati", "Aprilia Armanda", "Bagas Prakoso",
+        "Desi Rahmadani", "Desta Angga Syahputra", "Edward Alexis Saragi", "Faris Ramadani",
+        "Irwansyah Alexsander", "Juandra Zebua", "Juwita", "Lenta Mentari", "Lisa Sri Utami",
+        "M Zibran Fatturaman", "Maulana Malik Ibrahim", "Muhammad Pahri", "Muhammad Afrizal",
+        "Muhammad Amin", "Naomi Sepriyani", "Nzawa Khaira Wilda", "Nurmayanti",
+        "Q Vela Br Situmorang", "Ratna Sari Dewi", "Riski Muhammad Nur Fahmi", "Safitri Nurfadilah",
+        "Selvi", "Adistya Mahardika", "Mareti Wakha", "Andini puji lestari"
     ],
     "Kelas 9": [
         "Abelia", "Alfinus", "Arifki", "Felicita", "Hendra", "Heri", "Hezekiel", "Lesi", 
@@ -134,7 +141,8 @@ def get_data_siswa(kelas_nama):
     possible_filenames = [
         f"{kelas_nama.upper()}.csv",
         f"{kelas_nama}.csv",
-        f"{kelas_nama.lower()}.csv"
+        f"{kelas_nama.lower()}.csv",
+        f"KELAS {kelas_nama.replace('Kelas ', '')}.csv"
     ]
     
     for filename in possible_filenames:
@@ -207,7 +215,7 @@ with st.sidebar:
     st.markdown("### 🏫 Pengaturan Kelas, Mapel & Bulan")
     
     mapel_aktif = st.selectbox("Pilih Mata Pelajaran", ["PPKn", "IPS"])
-    kelas_aktif = st.selectbox("Pilih Kelas Aktif", ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"], index=1)
+    kelas_aktif = st.selectbox("Pilih Kelas Aktif", ["Kelas 7A", "Kelas 7B", "Kelas 8", "Kelas 9"], index=2)
     
     bulan_aktif = st.selectbox(
         "Pilih Bulan Presensi",
@@ -218,6 +226,14 @@ with st.sidebar:
     semester = st.selectbox("Semester", ["Ganjil", "Genap"])
     
     st.divider()
+    # TOMBOL RESET MEMORI/CACHE SISWA BARU
+    if st.button("🔄 Muat Ulang / Synchronize Data Siswa CSV", help="Klik jika ada penambahan/pengurangan nama siswa di file CSV GitHub"):
+        for k in list(st.session_state.keys()):
+            if "presensi_" in k or "nilai_" in k:
+                del st.session_state[k]
+        st.success("✅ Data siswa berhasil disinkronkan ulang dengan CSV!")
+        st.rerun()
+
     if client:
         st.success("🟢 Otentikasi Google Sheets API Aktif!")
     else:
@@ -244,37 +260,45 @@ TANGGAL_JADWAL = get_jadwal_tanggal(mapel_aktif, kelas_aktif, bulan_aktif, tahun
 # --- PRESENSI DINAMIS ---
 if key_p not in st.session_state:
     df_cloud_p = load_data_from_sheet(sheet_p_name)
-    if df_cloud_p is None or df_cloud_p.empty:
-        df_old_p = load_data_from_sheet(f"Presensi_{kelas_aktif}")
-        if df_old_p is not None and not df_old_p.empty:
-            df_cloud_p = df_old_p.copy()
-
-    if df_cloud_p is not None and not df_cloud_p.empty:
-        for t in TANGGAL_JADWAL:
-            if t not in df_cloud_p.columns:
-                df_cloud_p[t] = ""
-        st.session_state[key_p] = df_cloud_p
+    
+    # Rekonsiliasi Daftar Nama Siswa
+    df_base_p = DF_SISWA_AKTIF.copy()
+    if df_cloud_p is not None and not df_cloud_p.empty and "Nama" in df_cloud_p.columns:
+        df_p = pd.merge(df_base_p[["No", "Nama", "Jenis Kelamin"]], df_cloud_p, on="Nama", how="left")
+        df_p["No"] = range(1, len(df_p) + 1)
+        if "Jenis Kelamin_x" in df_p.columns:
+            df_p["Jenis Kelamin"] = df_p["Jenis Kelamin_x"].fillna(df_p["Jenis Kelamin_y"])
+            df_p.drop(columns=["Jenis Kelamin_x", "Jenis Kelamin_y"], inplace=True)
     else:
-        df_p = DF_SISWA_AKTIF.copy()
-        for t in TANGGAL_JADWAL:
+        df_p = df_base_p.copy()
+        
+    for t in TANGGAL_JADWAL:
+        if t not in df_p.columns:
             df_p[t] = ""
-        st.session_state[key_p] = df_p
+            
+    st.session_state[key_p] = df_p
 
 # --- BUKU NILAI ---
 if key_n not in st.session_state:
     df_cloud_n = load_data_from_sheet(sheet_n_name)
-    if df_cloud_n is None or df_cloud_n.empty:
-        df_old_n = load_data_from_sheet(f"Nilai_{kelas_aktif}")
-        if df_old_n is not None and not df_old_n.empty:
-            df_cloud_n = df_old_n.copy()
-
-    if df_cloud_n is not None and not df_cloud_n.empty:
-        st.session_state[key_n] = df_cloud_n
+    
+    # Rekonsiliasi Daftar Nama Siswa Buku Nilai
+    df_base_n = DF_SISWA_AKTIF.copy()
+    if df_cloud_n is not None and not df_cloud_n.empty and "Nama" in df_cloud_n.columns:
+        df_n = pd.merge(df_base_n[["No", "Nama", "Jenis Kelamin"]], df_cloud_n, on="Nama", how="left")
+        df_n["No"] = range(1, len(df_n) + 1)
+        if "Jenis Kelamin_x" in df_n.columns:
+            df_n["Jenis Kelamin"] = df_n["Jenis Kelamin_x"].fillna(df_n["Jenis Kelamin_y"])
+            df_n.drop(columns=["Jenis Kelamin_x", "Jenis Kelamin_y"], inplace=True)
     else:
-        df_n = DF_SISWA_AKTIF.copy()
-        for i in range(1, JUMLAH_KOLOM_NILAI + 1):
-            df_n[f"Nilai {i}"] = None
-        st.session_state[key_n] = df_n
+        df_n = df_base_n.copy()
+        
+    for i in range(1, JUMLAH_KOLOM_NILAI + 1):
+        col_n = f"Nilai {i}"
+        if col_n not in df_n.columns:
+            df_n[col_n] = None
+            
+    st.session_state[key_n] = df_n
 
 # ==========================================
 # 7. HEADER BANNER
@@ -589,24 +613,29 @@ with tab2:
         key=f"editor_p_{mapel_aktif}_{kelas_aktif}_{bulan_aktif}"
     )
     
-    cols_to_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_p.columns] + TANGGAL_JADWAL
+    cols_to_keep = [c for c in edited_p.columns if c in ["No", "Nama", "Jenis Kelamin"]] + TANGGAL_JADWAL
     st.session_state[key_p] = edited_p[cols_to_keep]
 
-    # --- SINKRONISASI OTOMATIS NILAI PRESENSI KE BUKU NILAI (MAX 75 / PAS KKM) ---
+    # --- SINKRONISASI PRESISI NAMA BUKU NILAI ---
     total_pertemuan = len(TANGGAL_JADWAL)
     if total_pertemuan > 0:
-        # Bobot: Hadir (H) = 75.0 (Pas KKM), Sakit/Izin (S/I) = 60.0, Alpa/Kosong = 0.0
         skor_h = (df_upper == "H").sum(axis=1) * 75.0
         skor_s = (df_upper == "S").sum(axis=1) * 60.0
         skor_i = (df_upper == "I").sum(axis=1) * 60.0
         
         nilai_presensi_calc = ((skor_h + skor_s + skor_i) / total_pertemuan).round(1)
-        st.session_state[key_n]["Nilai 1"] = nilai_presensi_calc
+        
+        # Peta Nama -> Nilai Presensi
+        map_presensi = pd.Series(nilai_presensi_calc.values, index=edited_p["Nama"].astype(str).str.strip().str.lower())
+        
+        # Sinkronkan ke Buku Nilai
+        nama_in_n = st.session_state[key_n]["Nama"].astype(str).str.strip().str.lower()
+        st.session_state[key_n]["Nilai 1"] = nama_in_n.map(map_presensi).fillna(0.0)
 
     if st.button(f"💾 Simpan Presensi {mapel_aktif} {kelas_aktif} ({bulan_aktif}) ke Google Sheets", type="primary"):
         if save_data_to_sheet(sheet_p_name, edited_p):
             save_data_to_sheet(sheet_n_name, st.session_state[key_n])
-            st.success(f"✅ Presensi & Nilai Kehadiran Otomatis Bulan {bulan_aktif} Berhasil Disimpan!")
+            st.success(f"✅ Presensi & Nilai Kehadiran Otomatis Bulan {bulan_aktif} Berhasil Disimpan & Disinkronkan!")
 
 # ------------------------------------------
 # TAB 3: BUKU NILAI & KKTP
@@ -619,7 +648,6 @@ with tab3:
         cols_kat = st.columns(5)
         kategori_terpilih = {}
         
-        # Kolom Nilai 1 dikunci khusus untuk Nilai Kehadiran Otomatis
         kategori_terpilih["Nilai 1"] = "Nilai Kehadiran (Otomatis)"
         with cols_kat[0]:
             st.text_input("Kolom Nilai 1", "Nilai Kehadiran (Otomatis)", disabled=True, key=f"kat_n_1_dis_{mapel_aktif}_{kelas_aktif}")
@@ -667,10 +695,7 @@ with tab3:
     nilai_presensi_num = pd.to_numeric(df_nilai_current["Nilai 1"], errors='coerce').fillna(0)
     nilai_akademik_num = df_nilai_current["📚 Rata Akademik"].fillna(0)
     
-    # Bonus poin = 10% dari Nilai Presensi (Presensi 75 = +7.5 poin bonus penunjang)
     poin_bonus_presensi = (nilai_presensi_num * 0.10).round(1)
-    
-    # Nilai Akhir = Nilai Akademik + Bonus Presensi (Di-clip maksimal 100.0)
     nilai_akhir_calc = nilai_akademik_num + poin_bonus_presensi
     df_nilai_current["📊 Nilai Akhir"] = nilai_akhir_calc.clip(upper=100.0).round(2)
 
@@ -690,7 +715,7 @@ with tab3:
         key=f"editor_n_{mapel_aktif}_{kelas_aktif}"
     )
     
-    cols_n_keep = [c for c in DF_SISWA_AKTIF.columns if c in edited_n.columns] + kolom_nilai_keys
+    cols_n_keep = [c for c in edited_n.columns if c in ["No", "Nama", "Jenis Kelamin"]] + kolom_nilai_keys
     st.session_state[key_n] = edited_n[cols_n_keep]
 
     st.markdown("---")
